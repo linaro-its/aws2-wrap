@@ -124,9 +124,9 @@ def main():
         sso_account_id,
         sso_access_token)
     if args.export:
-        print("export AWS_ACCESS_KEY_ID=%s" % access_key)
-        print("export AWS_SECRET_ACCESS_KEY=%s" % secret_access_key)
-        print("export AWS_SESSION_TOKEN=%s" % session_token)
+        print("AWS_ACCESS_KEY_ID=%s" % access_key)
+        print("AWS_SECRET_ACCESS_KEY=%s" % secret_access_key)
+        print("AWS_SESSION_TOKEN=%s" % session_token)
     elif args.exec is not None:
         os.environ["AWS_ACCESS_KEY_ID"] = access_key
         os.environ["AWS_SECRET_ACCESS_KEY"] = secret_access_key
