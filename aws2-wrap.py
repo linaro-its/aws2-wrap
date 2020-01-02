@@ -85,7 +85,7 @@ def retrieve_token(sso_start_url, sso_region, profile_name):
         token = retrieve_token_from_file(cachefile, sso_start_url, sso_region)
         if token is not None:
             return token
-    sys.exit("Please login with 'aws2 sso login --profile=%s" % profile_name)
+    sys.exit("Please login with 'aws2 sso login --profile=%s'" % profile_name)
 
 
 def get_role_credentials(profile_name, sso_role_name, sso_account_id, sso_access_token):
@@ -102,9 +102,12 @@ def get_role_credentials(profile_name, sso_role_name, sso_account_id, sso_access
             "--access-token", sso_access_token
         ],
         stderr=subprocess.PIPE,
-        stdout=subprocess.PIPE,
-        check=True
+        stdout=subprocess.PIPE
     )
+    if result.returncode != 0:
+        print(result.stderr.decode(), file=sys.stderr)
+        sys.exit("Please login with 'aws2 sso login --profile=%s'" % profile_name)
+
     output = result.stdout
     blob = json.loads(output)
     access_key = blob["roleCredentials"]["accessKeyId"]
@@ -124,9 +127,9 @@ def main():
         sso_account_id,
         sso_access_token)
     if args.export:
-        print("AWS_ACCESS_KEY_ID=%s" % access_key)
-        print("AWS_SECRET_ACCESS_KEY=%s" % secret_access_key)
-        print("AWS_SESSION_TOKEN=%s" % session_token)
+        print("export AWS_ACCESS_KEY_ID=\"%s\"" % access_key)
+        print("export AWS_SECRET_ACCESS_KEY=\"%s\"" % secret_access_key)
+        print("export AWS_SESSION_TOKEN=\"%s\"" % session_token)
     elif args.exec is not None:
         os.environ["AWS_ACCESS_KEY_ID"] = access_key
         os.environ["AWS_SECRET_ACCESS_KEY"] = secret_access_key
