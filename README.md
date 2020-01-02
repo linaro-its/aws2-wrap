@@ -1,3 +1,5 @@
+[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=linaro-its_aws2-wrap&metric=alert_status)](https://sonarcloud.io/dashboard?id=linaro-its_aws2-wrap)
+
 # aws2-wrap
 This is aimple script to facilitate exporting the current AWS SSO credentials or runing a command with them.
 
