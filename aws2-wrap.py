@@ -11,6 +11,7 @@
 #
 # Copyright (c) 2020 Linaro Ltd
 
+
 import argparse
 import configparser
 import json
@@ -135,6 +136,7 @@ def main():
         os.environ["AWS_SECRET_ACCESS_KEY"] = secret_access_key
         os.environ["AWS_SESSION_TOKEN"] = session_token
         os.system(args.exec)
+
 
 if __name__ == '__main__':
     main()
