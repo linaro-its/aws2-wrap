@@ -11,7 +11,7 @@ Note that you must enclose the command to be executed within double-quotes in or
 
 For example:
 
-`aws2-wrap.py --profile MySSOProfile --exec "aws sts get-caller-identity"`
+`aws2-wrap.py --profile MySSOProfile --exec "terraform"`
 
 ## Export the credentials
 
