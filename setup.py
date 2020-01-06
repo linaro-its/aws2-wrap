@@ -15,6 +15,9 @@ setup(
         'Programming Language :: Python :: 3.8',
     ],
     keywords="aws profile sso assume role",
+    packages=[
+        "aws2wrap"
+    ],
     install_requires=[],
     entry_points={
         'console_scripts': [
