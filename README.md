@@ -19,7 +19,7 @@ There may be circumstances when it is easier/better to set the appropriate envir
 
 Since the script cannot directly set the environment variables in the calling shell process, it is necessary to use the following syntax:
 
-`eval "$(aws2-wrap --profile <awsprofilename --export)"`
+`eval "$(aws2-wrap --profile <awsprofilename> --export)"`
 
 For example:
 
