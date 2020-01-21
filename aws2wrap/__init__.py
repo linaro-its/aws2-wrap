@@ -19,7 +19,7 @@ import os
 import pathlib
 import subprocess
 import sys
-from datetime import datetime
+from datetime import datetime, timezone
 
 
 def process_arguments():
@@ -68,8 +68,8 @@ def retrieve_token_from_file(filename, sso_start_url, sso_region):
         return None
     expires_at = blob["expiresAt"]
     # This will be a string like "2020-03-26T13:28:35UTC"
-    expire_datetime = datetime.strptime(expires_at, "%Y-%m-%dT%H:%M:%S%Z")
-    if expire_datetime < datetime.now():
+    expire_datetime = datetime.strptime(expires_at.replace("UTC", "+00:00"), "%Y-%m-%dT%H:%M:%S%z")
+    if expire_datetime < datetime.now(timezone.utc):
         # This has expired
         return None
     # Everything looks OK ...
