@@ -89,7 +89,7 @@ def retrieve_token(sso_start_url, sso_region, profile_name):
     sys.exit("Please login with 'aws sso login --profile=%s'" % profile_name)
 
 
-def get_role_credentials(profile_name, sso_role_name, sso_account_id, sso_access_token):
+def get_role_credentials(profile_name, sso_role_name, sso_account_id, sso_access_token, sso_region):
     """ Get the role credentials. """
     # We call the aws2 CLI tool rather than trying to use boto3 because the latter is
     # currently a special version and this script is trying to avoid needing any extra
@@ -100,7 +100,8 @@ def get_role_credentials(profile_name, sso_role_name, sso_account_id, sso_access
             "--profile", profile_name,
             "--role-name", sso_role_name,
             "--account-id", sso_account_id,
-            "--access-token", sso_access_token
+            "--access-token", sso_access_token,
+            "--region", sso_region
         ],
         stderr=subprocess.PIPE,
         stdout=subprocess.PIPE
@@ -126,7 +127,8 @@ def main():
         args.profile,
         sso_role_name,
         sso_account_id,
-        sso_access_token)
+        sso_access_token,
+        sso_region)
     if args.export:
         print("export AWS_ACCESS_KEY_ID=\"%s\"" % access_key)
         print("export AWS_SECRET_ACCESS_KEY=\"%s\"" % secret_access_key)
