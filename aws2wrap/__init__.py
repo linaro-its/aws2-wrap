@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 #
-# aws2-wrap [--profile <profile>] [--export | --exec <run command>]
+# aws2-wrap [-h] [--export] [--profile PROFILE] <command>
 #
 # A simple script that exports the accessKeyId, secretAccessKey and sessionToken for the specified
 # AWS SSO credentials, or it can run a subprocess with those credentials.
