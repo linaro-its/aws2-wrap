@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 #
-# aws2-wrap --profile <profile> [--export | --exec <run command>]
+# aws2-wrap [--profile <profile>] [--export | --exec <run command>]
 #
 # A simple script that exports the accessKeyId, secretAccessKey and sessionToken for the specified
 # AWS SSO credentials, or it can run a subprocess with those credentials.
@@ -28,7 +28,8 @@ def process_arguments():
     group = parser.add_mutually_exclusive_group()
     group.add_argument("--export", action="store_true")
     group.add_argument("--exec", action="store")
-    parser.add_argument("--profile", action="store", required=True)
+    profile_from_envvar = os.environ.get("AWS_PROFILE", os.environ.get("AWS_DEFAULT_PROFILE", None))
+    parser.add_argument("--profile", action="store", default=profile_from_envvar)
     args = parser.parse_args()
     return args
 
