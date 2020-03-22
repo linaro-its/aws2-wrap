@@ -26,9 +26,9 @@ def process_arguments():
     """ Check and extract arguments provided. """
     parser = argparse.ArgumentParser(allow_abbrev=False)
     parser.add_argument("--export", action="store")
-    parser.add_argument("exec", action="store", nargs=argparse.REMAINDER)
     profile_from_envvar = os.environ.get("AWS_PROFILE", os.environ.get("AWS_DEFAULT_PROFILE", None))
     parser.add_argument("--profile", action="store", default=profile_from_envvar)
+    parser.add_argument("exec", action="store", nargs=argparse.REMAINDER)
     args = parser.parse_args()
     return args
 
