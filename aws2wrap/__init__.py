@@ -137,7 +137,15 @@ def main():
         os.environ["AWS_ACCESS_KEY_ID"] = access_key
         os.environ["AWS_SECRET_ACCESS_KEY"] = secret_access_key
         os.environ["AWS_SESSION_TOKEN"] = session_token
-        os.system(args.exec)
+        # what's going on here? the return value of os.system is not
+        # simply the exit code of the process
+        # see: https://mail.python.org/pipermail/python-list/2003-May/207712.html
+        status = os.system(args.exec)
+        if status is None:
+            sys.exit(0)
+        if status % 256 == 0:
+            sys.exit(status//256)
+        sys.exit(status % 256)
 
 
 if __name__ == '__main__':
