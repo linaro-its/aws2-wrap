@@ -123,6 +123,8 @@ def get_role_credentials(profile_name, sso_role_name, sso_account_id, sso_access
 def main():
     """ Main! """
     args = process_arguments()
+    if args.profile is None:
+        sys.exit("Please specify profile name by --profile or environment variable AWS_PROFILE")
     sso_start_url, sso_region, sso_account_id, sso_role_name = retrieve_profile(args.profile)
     sso_access_token = retrieve_token(sso_start_url, sso_region, args.profile)
     access_key, secret_access_key, session_token = get_role_credentials(
