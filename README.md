@@ -17,6 +17,10 @@ For example:
 
 `aws2-wrap --profile MySSOProfile terraform plan`
 
+Also you can use AWS_PROFILE(AWS_DEFAULT_PROFILE) environment variable:
+
+`AWS_PROFILE=MySSOProfile aws2-wrap terraform plan`
+
 ## Export the credentials
 
 There may be circumstances when it is easier/better to set the appropriate environment variables so that they can be re-used by any `aws` command.
