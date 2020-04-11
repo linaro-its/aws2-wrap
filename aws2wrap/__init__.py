@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 #
-# aws2-wrap [-h] [--export] [--profile PROFILE] <command>
+# aws2-wrap [-h] [--export] [--profile PROFILE] [--exec <command>] <command>
 #
 # A simple script that exports the accessKeyId, secretAccessKey and sessionToken for the specified
 # AWS SSO credentials, or it can run a subprocess with those credentials.
@@ -25,10 +25,12 @@ from datetime import datetime, timezone
 def process_arguments():
     """ Check and extract arguments provided. """
     parser = argparse.ArgumentParser(allow_abbrev=False)
-    parser.add_argument("--export", action="store_true")
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument("--export", action="store_true")
+    group.add_argument("--exec", action="store")
     profile_from_envvar = os.environ.get("AWS_PROFILE", os.environ.get("AWS_DEFAULT_PROFILE", None))
     parser.add_argument("--profile", action="store", default=profile_from_envvar)
-    parser.add_argument("exec", action="store", nargs=argparse.REMAINDER, help="a command what you want to wrap")
+    parser.add_argument("command", action="store", nargs=argparse.REMAINDER, help="a command what you want to wrap")
     args = parser.parse_args()
     return args
 
@@ -133,11 +135,14 @@ def main():
         print("export AWS_ACCESS_KEY_ID=\"%s\"" % access_key)
         print("export AWS_SECRET_ACCESS_KEY=\"%s\"" % secret_access_key)
         print("export AWS_SESSION_TOKEN=\"%s\"" % session_token)
-    elif args.exec is not None:
+    else:
         os.environ["AWS_ACCESS_KEY_ID"] = access_key
         os.environ["AWS_SECRET_ACCESS_KEY"] = secret_access_key
         os.environ["AWS_SESSION_TOKEN"] = session_token
-        os.system(" ".join(args.exec))
+        if args.exec is not None:
+            os.system(args.exec)
+        elif args.command is not None:
+            os.system(" ".join(args.command))
 
 
 if __name__ == '__main__':
