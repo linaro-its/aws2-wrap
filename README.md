@@ -56,16 +56,16 @@ For example, add the following block to `.aws/config`:
 credential_process = aws2-wrap --process --profile <awsprofilename>
 ```
 
-then, after authentication:
-
-`aws sso login --profile <awsprofilename>`
-
-you can run any command that uses AWS credentials by specifying the "Wrapped" profile:
+then, after authentication, you can run any command that uses AWS credentials by specifying the "Wrapped" profile:
 
 ```
+aws sso login --profile <awsprofilename>
 export AWS_PROFILE=Wrapped
+export AWS_SDK_LOAD_CONFIG=1
 terraform plan
 ```
+
+Note that because the profile is being specified via `AWS_PROFILE`, it is sometimes necessary (as shown above) to set `AWS_SDK_LOAD_CONFIG` in order to get tools like `terraform` to successfully retrieve the credentials.
 
 ## Credits
 
