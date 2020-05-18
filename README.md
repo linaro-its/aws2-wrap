@@ -11,13 +11,15 @@ https://pypi.org/project/aws2-wrap
 
 ## Run a command using AWS SSO credentials
 
-`aws2-wrap --profile <awsprofilename> --exec "<command>"`
-
-Note that you must enclose the command to be executed within double-quotes in order to ensure that any parameters are passed to that sub-command and not to `aws2-wrap`.
+`aws2-wrap [--profile <awsprofilename>] <command>`
 
 For example:
 
-`aws2-wrap --profile MySSOProfile --exec "terraform"`
+`aws2-wrap --profile MySSOProfile terraform plan`
+
+Also you can use AWS_PROFILE(AWS_DEFAULT_PROFILE) environment variable:
+
+`AWS_PROFILE=MySSOProfile aws2-wrap terraform plan`
 
 ## Export the credentials
 
@@ -25,7 +27,7 @@ There may be circumstances when it is easier/better to set the appropriate envir
 
 Since the script cannot directly set the environment variables in the calling shell process, it is necessary to use the following syntax:
 
-`eval "$(aws2-wrap --profile <awsprofilename> --export)"`
+`eval "$(aws2-wrap [--profile <awsprofilename>] --export)"`
 
 For example:
 

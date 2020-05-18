@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 #
-# aws2-wrap --profile <profile> [--export | --exec <run command>]
+# aws2-wrap [-h] [--export] [--profile PROFILE] [--exec <command>] <command>
 #
 # A simple script that exports the accessKeyId, secretAccessKey and sessionToken for the specified
 # AWS SSO credentials, or it can run a subprocess with those credentials.
@@ -28,7 +28,9 @@ def process_arguments():
     group = parser.add_mutually_exclusive_group()
     group.add_argument("--export", action="store_true")
     group.add_argument("--exec", action="store")
-    parser.add_argument("--profile", action="store", required=True)
+    profile_from_envvar = os.environ.get("AWS_PROFILE", os.environ.get("AWS_DEFAULT_PROFILE", None))
+    parser.add_argument("--profile", action="store", default=profile_from_envvar)
+    parser.add_argument("command", action="store", nargs=argparse.REMAINDER, help="a command what you want to wrap")
     args = parser.parse_args()
     return args
 
@@ -121,6 +123,8 @@ def get_role_credentials(profile_name, sso_role_name, sso_account_id, sso_access
 def main():
     """ Main! """
     args = process_arguments()
+    if args.profile is None:
+        sys.exit("Please specify profile name by --profile or environment variable AWS_PROFILE")
     sso_start_url, sso_region, sso_account_id, sso_role_name = retrieve_profile(args.profile)
     sso_access_token = retrieve_token(sso_start_url, sso_region, args.profile)
     access_key, secret_access_key, session_token = get_role_credentials(
@@ -133,11 +137,14 @@ def main():
         print("export AWS_ACCESS_KEY_ID=\"%s\"" % access_key)
         print("export AWS_SECRET_ACCESS_KEY=\"%s\"" % secret_access_key)
         print("export AWS_SESSION_TOKEN=\"%s\"" % session_token)
-    elif args.exec is not None:
+    else:
         os.environ["AWS_ACCESS_KEY_ID"] = access_key
         os.environ["AWS_SECRET_ACCESS_KEY"] = secret_access_key
         os.environ["AWS_SESSION_TOKEN"] = session_token
-        os.system(args.exec)
+        if args.exec is not None:
+            os.system(args.exec)
+        elif args.command is not None:
+            os.system(" ".join(args.command))
 
 
 if __name__ == '__main__':
