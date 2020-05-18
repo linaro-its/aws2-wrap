@@ -27,10 +27,11 @@ def process_arguments():
     parser = argparse.ArgumentParser(allow_abbrev=False)
     group = parser.add_mutually_exclusive_group()
     group.add_argument("--export", action="store_true")
+    group.add_argument("--process", action="store_true")
     group.add_argument("--exec", action="store")
     profile_from_envvar = os.environ.get("AWS_PROFILE", os.environ.get("AWS_DEFAULT_PROFILE", None))
     parser.add_argument("--profile", action="store", default=profile_from_envvar)
-    parser.add_argument("command", action="store", nargs=argparse.REMAINDER, help="a command what you want to wrap")
+    parser.add_argument("command", action="store", nargs=argparse.REMAINDER, help="a command that you want to wrap")
     args = parser.parse_args()
     return args
 
@@ -113,12 +114,7 @@ def get_role_credentials(profile_name, sso_role_name, sso_account_id, sso_access
         print(result.stderr.decode(), file=sys.stderr)
         sys.exit("Please login with 'aws sso login --profile=%s'" % profile_name)
 
-    output = result.stdout
-    blob = json.loads(output)
-    access_key = blob["roleCredentials"]["accessKeyId"]
-    secret_access_key = blob["roleCredentials"]["secretAccessKey"]
-    session_token = blob["roleCredentials"]["sessionToken"]
-    return access_key, secret_access_key, session_token
+    return json.loads(result.stdout)
 
 
 def main():
@@ -128,24 +124,45 @@ def main():
         sys.exit("Please specify profile name by --profile or environment variable AWS_PROFILE")
     sso_start_url, sso_region, sso_account_id, sso_role_name = retrieve_profile(args.profile)
     sso_access_token = retrieve_token(sso_start_url, sso_region, args.profile)
-    access_key, secret_access_key, session_token = get_role_credentials(
+    grc_structure = get_role_credentials(
         args.profile,
         sso_role_name,
         sso_account_id,
         sso_access_token,
         sso_region)
+    # Extract the results from the roleCredentials structure
+    access_key = grc_structure["roleCredentials"]["accessKeyId"]
+    secret_access_key = grc_structure["roleCredentials"]["secretAccessKey"]
+    session_token = grc_structure["roleCredentials"]["sessionToken"]
+    expiration = grc_structure["roleCredentials"]["expiration"]
     if args.export:
         print("export AWS_ACCESS_KEY_ID=\"%s\"" % access_key)
         print("export AWS_SECRET_ACCESS_KEY=\"%s\"" % secret_access_key)
         print("export AWS_SESSION_TOKEN=\"%s\"" % session_token)
+    elif args.process:
+        output = {
+            "Version": 1,
+            "AccessKeyId": access_key,
+            "SecretAccessKey": secret_access_key,
+            "SessionToken": session_token,
+            "Expiration": datetime.fromtimestamp(float(expiration)/1000).replace(tzinfo=timezone.utc).isoformat()
+        }
+        print(json.dumps(output))
     else:
         os.environ["AWS_ACCESS_KEY_ID"] = access_key
         os.environ["AWS_SECRET_ACCESS_KEY"] = secret_access_key
         os.environ["AWS_SESSION_TOKEN"] = session_token
         if args.exec is not None:
-            os.system(args.exec)
+            status = os.system(args.exec)
         elif args.command is not None:
-            os.system(" ".join(args.command))
+            status = os.system(" ".join(args.command))
+        # The return value of os.system is not simply the exit code of the process
+        # see: https://mail.python.org/pipermail/python-list/2003-May/207712.html
+        if status is None:
+            sys.exit(0)
+        if status % 256 == 0:
+            sys.exit(status//256)
+        sys.exit(status % 256)
 
 
 if __name__ == '__main__':
