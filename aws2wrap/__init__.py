@@ -103,7 +103,8 @@ def get_role_credentials(profile_name, sso_role_name, sso_account_id, sso_access
             "--role-name", sso_role_name,
             "--account-id", sso_account_id,
             "--access-token", sso_access_token,
-            "--region", sso_region
+            "--region", sso_region,
+            "--output", "json"
         ],
         stderr=subprocess.PIPE,
         stdout=subprocess.PIPE
