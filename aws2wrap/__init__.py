@@ -45,7 +45,10 @@ def retrieve_attribute(profile, tag):
 
 def retrieve_profile(profile_name):
     """ Find the AWS Config profile matching the specified profile name. """
-    config_path = os.path.abspath(os.path.expanduser("~/.aws/config"))
+    if "AWS_CONFIG_FILE" in os.environ:
+        config_path = os.path.abspath(os.environ.get("AWS_CONFIG_FILE"))
+    else:
+        config_path = os.path.abspath(os.path.expanduser("~/.aws/config"))
     config = configparser.ConfigParser()
     config.read(config_path)
     # Look for the required profile
