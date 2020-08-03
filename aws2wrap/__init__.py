@@ -54,13 +54,19 @@ def retrieve_profile(profile_name):
     # Look for the required profile
     if "profile %s" % profile_name not in config:
         sys.exit("Cannot find profile '%s' in ~/.aws/config" % profile_name)
-    # Retrieve the values
-    profile = config["profile %s" % profile_name]
-    sso_start_url = retrieve_attribute(profile, "sso_start_url")
-    sso_region = retrieve_attribute(profile, "sso_region")
-    sso_account_id = retrieve_attribute(profile, "sso_account_id")
-    sso_role_name = retrieve_attribute(profile, "sso_role_name")
-    return sso_start_url, sso_region, sso_account_id, sso_role_name
+    # Retrieve the values as dict
+    profile = dict(config["profile %s" % profile_name])
+
+    # append profile_name as an attribute
+    profile["profile_name"] = profile_name
+
+    if "source_profile" in profile:
+        # Retrieve source_profile recursively and append it to profile dict
+        profile["source_profile"] = retrieve_profile(
+            retrieve_attribute(profile, "source_profile")
+        )
+
+    return profile
 
 
 def retrieve_token_from_file(filename, sso_start_url, sso_region):
@@ -95,8 +101,17 @@ def retrieve_token(sso_start_url, sso_region, profile_name):
     sys.exit("Please login with 'aws sso login --profile=%s'" % profile_name)
 
 
-def get_role_credentials(profile_name, sso_role_name, sso_account_id, sso_access_token, sso_region):
+def get_role_credentials(profile):
     """ Get the role credentials. """
+
+    profile_name = retrieve_attribute(profile, "profile_name")
+    sso_start_url = retrieve_attribute(profile, "sso_start_url")
+    sso_region = retrieve_attribute(profile, "sso_region")
+    sso_account_id = retrieve_attribute(profile, "sso_account_id")
+    sso_role_name = retrieve_attribute(profile, "sso_role_name")
+
+    sso_access_token = retrieve_token(sso_start_url, sso_region, profile_name)
+
     # We call the aws2 CLI tool rather than trying to use boto3 because the latter is
     # currently a special version and this script is trying to avoid needing any extra
     # packages.
@@ -125,14 +140,11 @@ def main():
     args = process_arguments()
     if args.profile is None:
         sys.exit("Please specify profile name by --profile or environment variable AWS_PROFILE")
-    sso_start_url, sso_region, sso_account_id, sso_role_name = retrieve_profile(args.profile)
-    sso_access_token = retrieve_token(sso_start_url, sso_region, args.profile)
-    grc_structure = get_role_credentials(
-        args.profile,
-        sso_role_name,
-        sso_account_id,
-        sso_access_token,
-        sso_region)
+
+    profile = retrieve_profile(args.profile)
+    
+    grc_structure = get_role_credentials(profile)
+    
     # Extract the results from the roleCredentials structure
     access_key = grc_structure["roleCredentials"]["accessKeyId"]
     secret_access_key = grc_structure["roleCredentials"]["secretAccessKey"]
