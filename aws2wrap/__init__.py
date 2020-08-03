@@ -51,16 +51,28 @@ def retrieve_profile(profile_name):
         config_path = os.path.abspath(os.path.expanduser("~/.aws/config"))
     config = configparser.ConfigParser()
     config.read(config_path)
+    
+    if profile_name == "default":
+        section_name = "default"
+    else:
+        section_name = "profile %s" % profile_name
+
     # Look for the required profile
-    if "profile %s" % profile_name not in config:
+    if section_name not in config:
         sys.exit("Cannot find profile '%s' in ~/.aws/config" % profile_name)
-    # Retrieve the values
-    profile = config["profile %s" % profile_name]
-    sso_start_url = retrieve_attribute(profile, "sso_start_url")
-    sso_region = retrieve_attribute(profile, "sso_region")
-    sso_account_id = retrieve_attribute(profile, "sso_account_id")
-    sso_role_name = retrieve_attribute(profile, "sso_role_name")
-    return sso_start_url, sso_region, sso_account_id, sso_role_name
+    # Retrieve the values as dict
+    profile = dict(config[section_name])
+
+    # append profile_name as an attribute
+    profile["profile_name"] = profile_name
+
+    if "source_profile" in profile:
+        # Retrieve source_profile recursively and append it to profile dict
+        profile["source_profile"] = retrieve_profile(
+            retrieve_attribute(profile, "source_profile")
+        )
+
+    return profile
 
 
 def retrieve_token_from_file(filename, sso_start_url, sso_region):
@@ -95,8 +107,17 @@ def retrieve_token(sso_start_url, sso_region, profile_name):
     sys.exit("Please login with 'aws sso login --profile=%s'" % profile_name)
 
 
-def get_role_credentials(profile_name, sso_role_name, sso_account_id, sso_access_token, sso_region):
+def get_role_credentials(profile):
     """ Get the role credentials. """
+
+    profile_name = retrieve_attribute(profile, "profile_name")
+    sso_start_url = retrieve_attribute(profile, "sso_start_url")
+    sso_region = retrieve_attribute(profile, "sso_region")
+    sso_account_id = retrieve_attribute(profile, "sso_account_id")
+    sso_role_name = retrieve_attribute(profile, "sso_role_name")
+
+    sso_access_token = retrieve_token(sso_start_url, sso_region, profile_name)
+
     # We call the aws2 CLI tool rather than trying to use boto3 because the latter is
     # currently a special version and this script is trying to avoid needing any extra
     # packages.
@@ -120,19 +141,73 @@ def get_role_credentials(profile_name, sso_role_name, sso_account_id, sso_access
     return json.loads(result.stdout)
 
 
+def get_assumed_role_credentials(profile):
+    """Get the assumed role credentials specified by role_arn and source_profile."""
+
+    # If given profile is root, return sso role credentials.
+    if "source_profile" not in profile:
+        return get_role_credentials(profile)
+
+    # Get credentials of source_profile recursively.
+    source_credentials = get_assumed_role_credentials(
+        retrieve_attribute(profile, "source_profile")
+    )
+
+    # Set credentials of source_profile.
+    env = os.environ.copy()
+    env["AWS_ACCESS_KEY_ID"] = source_credentials["roleCredentials"]["accessKeyId"]
+    env["AWS_SECRET_ACCESS_KEY"] = source_credentials["roleCredentials"]["secretAccessKey"]
+    env["AWS_SESSION_TOKEN"] = source_credentials["roleCredentials"]["sessionToken"]
+
+    # Extract role_session_name.
+    # If role_session_name is not in profile,
+    # use "botocore-session-<unix_time>" as with AWS CLI.
+    if "role_session_name" in profile:
+        role_session_name = retrieve_attribute(profile, "role_session_name")
+    else:
+        unix_time = int(datetime.now().timestamp())
+        role_session_name = "botocore-session-%d" % unix_time
+
+    # AssumeRole using source credentials
+    result = subprocess.run(
+        [
+            "aws", "sts", "assume-role",
+            "--role-arn", retrieve_attribute(profile, "role_arn"),
+            "--role-session-name", role_session_name,
+            "--output", "json"
+        ],
+        stderr=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+        env=env,
+    )
+    if result.returncode != 0:
+        print(result.stderr.decode(), file=sys.stderr)
+        sys.exit("Failed to assume-role %s" % retrieve_attribute(profile, "role_arn"))
+    
+    output = json.loads(result.stdout)
+    return {
+        "roleCredentials": {
+            "accessKeyId": output["Credentials"]["AccessKeyId"],
+            "secretAccessKey": output["Credentials"]["SecretAccessKey"],
+            "sessionToken": output["Credentials"]["SessionToken"],
+            "expiration": output["Credentials"]["Expiration"],
+        }
+    }
+
+
 def main():
     """ Main! """
     args = process_arguments()
     if args.profile is None:
         sys.exit("Please specify profile name by --profile or environment variable AWS_PROFILE")
-    sso_start_url, sso_region, sso_account_id, sso_role_name = retrieve_profile(args.profile)
-    sso_access_token = retrieve_token(sso_start_url, sso_region, args.profile)
-    grc_structure = get_role_credentials(
-        args.profile,
-        sso_role_name,
-        sso_account_id,
-        sso_access_token,
-        sso_region)
+
+    profile = retrieve_profile(args.profile)
+    
+    if "source_profile" in profile:
+        grc_structure = get_assumed_role_credentials(profile)
+    else:
+        grc_structure = get_role_credentials(profile)
+
     # Extract the results from the roleCredentials structure
     access_key = grc_structure["roleCredentials"]["accessKeyId"]
     secret_access_key = grc_structure["roleCredentials"]["secretAccessKey"]
@@ -142,6 +217,9 @@ def main():
         print("export AWS_ACCESS_KEY_ID=\"%s\"" % access_key)
         print("export AWS_SECRET_ACCESS_KEY=\"%s\"" % secret_access_key)
         print("export AWS_SESSION_TOKEN=\"%s\"" % session_token)
+        # If region is specified in profile, also export AWS_REGION
+        if "region" in profile:
+            print("export AWS_REGION=\"%s\"" % retrieve_attribute(profile, "region"))
     elif args.process:
         output = {
             "Version": 1,
@@ -155,6 +233,9 @@ def main():
         os.environ["AWS_ACCESS_KEY_ID"] = access_key
         os.environ["AWS_SECRET_ACCESS_KEY"] = secret_access_key
         os.environ["AWS_SESSION_TOKEN"] = session_token
+        # If region is specified in profile, also set AWS_REGION
+        if "region" in profile:
+            os.environ["AWS_REGION"] = retrieve_attribute(profile, "region")
         if args.exec is not None:
             status = os.system(args.exec)
         elif args.command is not None:
