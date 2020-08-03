@@ -211,6 +211,9 @@ def main():
         print("export AWS_ACCESS_KEY_ID=\"%s\"" % access_key)
         print("export AWS_SECRET_ACCESS_KEY=\"%s\"" % secret_access_key)
         print("export AWS_SESSION_TOKEN=\"%s\"" % session_token)
+        # If region is specified in profile, also export AWS_REGION
+        if "region" in profile:
+            print("export AWS_REGION=\"%s\"" % retrieve_attribute(profile, "region"))
     elif args.process:
         output = {
             "Version": 1,
@@ -224,6 +227,9 @@ def main():
         os.environ["AWS_ACCESS_KEY_ID"] = access_key
         os.environ["AWS_SECRET_ACCESS_KEY"] = secret_access_key
         os.environ["AWS_SESSION_TOKEN"] = session_token
+        # If region is specified in profile, also set AWS_REGION
+        if "region" in profile:
+            os.environ["AWS_REGION"] = retrieve_attribute(profile, "region")
         if args.exec is not None:
             status = os.system(args.exec)
         elif args.command is not None:
