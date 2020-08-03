@@ -7,7 +7,8 @@ The script provides the following capabilities:
 
 * Running a specified command with the retrieved AWS SSO credentials.
 * Exporting the AWS SSO credentials.
-* Supporting `credential_process` within an aWS profile
+* Supporting `credential_process` within an AWS profile
+* Supporting assuming roles within an AWS profile
 
 Please note that the script is called `aws2-wrap` to show that it works with AWS CLI v2, even though the CLI tool is no longer called `aws2`.
 
@@ -15,7 +16,7 @@ Please note that the script is called `aws2-wrap` to show that it works with AWS
 
 https://pypi.org/project/aws2-wrap
 
-`pip install aws2-wrap==1.0.3`
+`pip install aws2-wrap==1.1.0`
 
 ## Run a command using AWS SSO credentials
 
@@ -45,6 +46,29 @@ For example:
 
 `eval "$(aws2-wrap --profile MySSOProfile --export)"`
 
+## Assuming a role via AWS SSO
+
+Your `.aws/config` file can look like this:
+
+```
+[default]
+sso_start_url = xxxxxxxxxxxx
+sso_region = us-west-2
+sso_account_id = xxxxxxxxxxxx
+sso_role_name = SSORoleName
+
+[profile account1]
+role_arn = arn:aws:iam::xxxxxxxxxxxx:role/role-to-be-assumed
+source_profile = default
+region = ap-northeast-1
+```
+
+allowing you to then run:
+
+`aws2-wrap --profile account1 <command>`
+
+and `<command>` will be run under `role-to-be-assumed`.
+
 ## Use the credentials via .aws/config
 
 If you are using a tool that works with normal AWS credentials but doesn't understand the new AWS SSO credentials, another option is to add a profile to `.aws/config` that calls the `aws2-wrap` script.
@@ -69,4 +93,4 @@ Note that because the profile is being specified via `AWS_PROFILE`, it is someti
 
 ## Credits
 
-Thanks to @flyinprogrammer, @abeluck, @topu, @bigwheel, @krabbit, @jscook2345 and @hieki for their contributions.
+Thanks to @flyinprogrammer, @abeluck, @topu, @bigwheel, @krabbit, @jscook2345, @hieki, @blazdivjak and @fukushun1994 for their contributions.
