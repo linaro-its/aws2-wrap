@@ -135,6 +135,60 @@ def get_role_credentials(profile):
     return json.loads(result.stdout)
 
 
+def get_assumed_role_credentials(profile):
+    """Get the assumed role credentials specified by role_arn and source_profile."""
+
+    # If given profile is root, return sso role credentials.
+    if "source_profile" not in profile:
+        return get_role_credentials(profile)
+
+    # Get credentials of source_profile recursively.
+    source_credentials = get_assumed_role_credentials(
+        retrieve_attribute(profile, "source_profile")
+    )
+
+    # Set credentials of source_profile.
+    env = os.environ.copy()
+    env["AWS_ACCESS_KEY_ID"] = source_credentials["roleCredentials"]["accessKeyId"]
+    env["AWS_SECRET_ACCESS_KEY"] = source_credentials["roleCredentials"]["secretAccessKey"]
+    env["AWS_SESSION_TOKEN"] = source_credentials["roleCredentials"]["sessionToken"]
+
+    # Extract role_session_name.
+    # If role_session_name is not in profile,
+    # use "botocore-session-<unix_time>" as with AWS CLI.
+    if "role_session_name" in profile:
+        role_session_name = retrieve_attribute(profile, "role_session_name")
+    else:
+        unix_time = int(datetime.now().timestamp())
+        role_session_name = "botocore-session-%d" % unix_time
+
+    # AssumeRole using source credentials
+    result = subprocess.run(
+        [
+            "aws", "sts", "assume-role",
+            "--role-arn", retrieve_attribute(profile, "role_arn"),
+            "--role-session-name", role_session_name,
+            "--output", "json"
+        ],
+        stderr=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+        env=env,
+    )
+    if result.returncode != 0:
+        print(result.stderr.decode(), file=sys.stderr)
+        sys.exit("Failed to assume-role %s" % retrieve_attribute(profile, "role_arn"))
+    
+    output = json.loads(result.stdout)
+    return {
+        "roleCredentials": {
+            "accessKeyId": output["Credentials"]["AccessKeyId"],
+            "secretAccessKey": output["Credentials"]["SecretAccessKey"],
+            "sessionToken": output["Credentials"]["SessionToken"],
+            "expiration": output["Credentials"]["Expiration"],
+        }
+    }
+
+
 def main():
     """ Main! """
     args = process_arguments()
@@ -143,8 +197,11 @@ def main():
 
     profile = retrieve_profile(args.profile)
     
-    grc_structure = get_role_credentials(profile)
-    
+    if "source_profile" in profile:
+        grc_structure = get_assumed_role_credentials(profile)
+    else:
+        grc_structure = get_role_credentials(profile)
+
     # Extract the results from the roleCredentials structure
     access_key = grc_structure["roleCredentials"]["accessKeyId"]
     secret_access_key = grc_structure["roleCredentials"]["secretAccessKey"]
