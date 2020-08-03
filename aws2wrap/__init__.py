@@ -51,11 +51,17 @@ def retrieve_profile(profile_name):
         config_path = os.path.abspath(os.path.expanduser("~/.aws/config"))
     config = configparser.ConfigParser()
     config.read(config_path)
+    
+    if profile_name == "default":
+        section_name = "default"
+    else:
+        section_name = "profile %s" % profile_name
+
     # Look for the required profile
-    if "profile %s" % profile_name not in config:
+    if section_name not in config:
         sys.exit("Cannot find profile '%s' in ~/.aws/config" % profile_name)
     # Retrieve the values as dict
-    profile = dict(config["profile %s" % profile_name])
+    profile = dict(config[section_name])
 
     # append profile_name as an attribute
     profile["profile_name"] = profile_name
