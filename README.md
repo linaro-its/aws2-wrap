@@ -22,7 +22,7 @@ https://pypi.org/project/aws2-wrap
 
 `aws2-wrap [--profile <awsprofilename>] [--exec] <command>`
 
-Note that if you are using `--exec` and `<command>` contains spaces, it must be surrouned with double-quotation marks.
+Note that if you are using `--exec` and `<command>` contains spaces, it must be surrounded with double-quotation marks.
 
 You can also specify the profile to be used via AWS_PROFILE which then allows the same profile to be used by subsequent tools and commands.
 
