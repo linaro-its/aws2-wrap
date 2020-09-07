@@ -138,7 +138,10 @@ def get_role_credentials(profile):
         print(result.stderr.decode(), file=sys.stderr)
         sys.exit("Please login with 'aws sso login --profile=%s'" % profile_name)
 
-    return json.loads(result.stdout)
+    output = json.loads(result.stdout)
+    # convert expiration from float value to isoformat string
+    output["roleCredentials"]["expiration"] = datetime.fromtimestamp(float(output["roleCredentials"]["expiration"])/1000).replace(tzinfo=timezone.utc).isoformat()
+    return output
 
 
 def get_assumed_role_credentials(profile):
@@ -226,7 +229,7 @@ def main():
             "AccessKeyId": access_key,
             "SecretAccessKey": secret_access_key,
             "SessionToken": session_token,
-            "Expiration": datetime.fromtimestamp(float(expiration)/1000).replace(tzinfo=timezone.utc).isoformat()
+            "Expiration": expiration,
         }
         print(json.dumps(output))
     else:
