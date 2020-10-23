@@ -27,12 +27,14 @@ def process_arguments():
     parser = argparse.ArgumentParser(allow_abbrev=False)
     group = parser.add_mutually_exclusive_group()
     group.add_argument("--export", action="store_true", help="export credentials as environment variables")
-    group.add_argument("--generate", action="store_true", help="generate credentials file from profile")
+    group.add_argument("--generate", action="store_true", help="generate credentials file from the input profile")
     group.add_argument("--process", action="store_true")
     group.add_argument("--exec", action="store")
-    parser.add_argument("--credentials", action="store_true", default="./credentials", help="the credentials file to append resulting credentials")
     profile_from_envvar = os.environ.get("AWS_PROFILE", os.environ.get("AWS_DEFAULT_PROFILE", None))
     parser.add_argument("--profile", action="store", default=profile_from_envvar, help="the source profile to use for creating credentials")
+    parser.add_argument("--outprofile", action="store", default="default", help="the destination profile to save generated credentials")
+    parser.add_argument("--configfile", action="store", default="./config", help="the config file to append resulting config")
+    parser.add_argument("--credentialsfile", action="store", default="./credentials", help="the credentials file to append resulting credentials")
     parser.add_argument("command", action="store", nargs=argparse.REMAINDER, help="a command that you want to wrap")
     args = parser.parse_args()
     return args
@@ -226,17 +228,20 @@ def main():
         if "region" in profile:
             print("export AWS_REGION=\"%s\"" % retrieve_attribute(profile, "region"))
     elif args.generate:
-        if args.newprofile is not None:
-            if args.credentials is not None:
-                credentials_file = open(args.credentials, 'a+')
-                credentials_file.write("[%s]\n" % args.command)
-                credentials_file.write("aws_access_key_id = %s\n" % access_key)
-                credentials_file.write("aws_secret_access_key = %s\n" % secret_access_key)
-                credentials_file.close()
-            else:
-                print("[%s]" % args.command)
-                print("aws_access_key_id = %s" % access_key)
-                print("aws_secret_access_key = %s" % secret_access_key)
+        if args.outprofile is not None:
+            print("Writing Credentials to %s" % args.credentialsfile)
+            print("The credentials will expire at %s" % expiration)
+            credentials_file = open(args.credentialsfile, 'a+')
+            credentials_file.write("[%s]\n" % args.outprofile)
+            credentials_file.write("aws_access_key_id = %s\n" % access_key)
+            credentials_file.write("aws_secret_access_key = %s\n" % secret_access_key)
+            credentials_file.write("aws_session_token = %s\n" % session_token)
+            credentials_file.close()
+            print("Writing Configuration to %s" % args.configfile)
+            configuration_file = open(args.configfile, 'a+')
+            configuration_file.write("[%s]\n" % args.outprofile)
+            if "region" in profile:
+                configuration_file.write("region = %s\n" % retrieve_attribute(profile, "region"))
     elif args.process:
         output = {
             "Version": 1,
