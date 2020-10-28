@@ -33,8 +33,8 @@ def process_arguments():
     profile_from_envvar = os.environ.get("AWS_PROFILE", os.environ.get("AWS_DEFAULT_PROFILE", None))
     parser.add_argument("--profile", action="store", default=profile_from_envvar, help="the source profile to use for creating credentials")
     parser.add_argument("--outprofile", action="store", default="default", help="the destination profile to save generated credentials")
-    parser.add_argument("--configfile", action="store", default="./config", help="the config file to append resulting config")
-    parser.add_argument("--credentialsfile", action="store", default="./credentials", help="the credentials file to append resulting credentials")
+    parser.add_argument("--configfile", action="store", default="~/.aws/config", help="the config file to append resulting config")
+    parser.add_argument("--credentialsfile", action="store", default="~/.aws/credentials", help="the credentials file to append resulting credentials")
     parser.add_argument("command", action="store", nargs=argparse.REMAINDER, help="a command that you want to wrap")
     args = parser.parse_args()
     return args
@@ -232,14 +232,13 @@ def main():
             print("Writing Credentials to %s" % args.credentialsfile)
             print("The credentials will expire at %s" % expiration)
             credentials_file = open(args.credentialsfile, 'a+')
-            credentials_file.write("[%s]\n" % args.outprofile)
+            credentials_file.write("\n[%s]\n" % args.outprofile)
             credentials_file.write("aws_access_key_id = %s\n" % access_key)
             credentials_file.write("aws_secret_access_key = %s\n" % secret_access_key)
-            credentials_file.write("aws_session_token = %s\n" % session_token)
             credentials_file.close()
             print("Writing Configuration to %s" % args.configfile)
             configuration_file = open(args.configfile, 'a+')
-            configuration_file.write("[%s]\n" % args.outprofile)
+            configuration_file.write("\n[%s]\n" % args.outprofile)
             if "region" in profile:
                 configuration_file.write("region = %s\n" % retrieve_attribute(profile, "region"))
     elif args.process:
