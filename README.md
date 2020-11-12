@@ -34,6 +34,12 @@ Examples:
 
 `AWS_PROFILE=MySSOProfile aws2-wrap terraform plan`
 
+## Generate a temporary profile in the $AWS_CONFIG_FILE and $AWS_SHARED_CREDENTIALS_FILE file
+
+There are some utilities which work better with the configuration files rather than the environment variables. For example, if you need to access more than one profile at a time.
+
+`aws2-wrap --generate --profile $AWS_PROFILE --credentialsfile $AWS_SHARED_CREDENTIALS_FILE --configfile $AWS_CONFIG_FILE --outprofile $DESTINATION_PROFILE`
+
 ## Export the credentials
 
 There may be circumstances when it is easier/better to set the appropriate environment variables so that they can be re-used by any `aws` command.

@@ -26,11 +26,15 @@ def process_arguments():
     """ Check and extract arguments provided. """
     parser = argparse.ArgumentParser(allow_abbrev=False)
     group = parser.add_mutually_exclusive_group()
-    group.add_argument("--export", action="store_true")
+    group.add_argument("--export", action="store_true", help="export credentials as environment variables")
+    group.add_argument("--generate", action="store_true", help="generate credentials file from the input profile")
     group.add_argument("--process", action="store_true")
     group.add_argument("--exec", action="store")
     profile_from_envvar = os.environ.get("AWS_PROFILE", os.environ.get("AWS_DEFAULT_PROFILE", None))
-    parser.add_argument("--profile", action="store", default=profile_from_envvar)
+    parser.add_argument("--profile", action="store", default=profile_from_envvar, help="the source profile to use for creating credentials")
+    parser.add_argument("--outprofile", action="store", default="default", help="the destination profile to save generated credentials")
+    parser.add_argument("--configfile", action="store", default="~/.aws/config", help="the config file to append resulting config")
+    parser.add_argument("--credentialsfile", action="store", default="~/.aws/credentials", help="the credentials file to append resulting credentials")
     parser.add_argument("command", action="store", nargs=argparse.REMAINDER, help="a command that you want to wrap")
     args = parser.parse_args()
     return args
@@ -51,7 +55,7 @@ def retrieve_profile(profile_name):
         config_path = os.path.abspath(os.path.expanduser("~/.aws/config"))
     config = configparser.ConfigParser()
     config.read(config_path)
-    
+
     if profile_name == "default":
         section_name = "default"
     else:
@@ -186,7 +190,7 @@ def get_assumed_role_credentials(profile):
     if result.returncode != 0:
         print(result.stderr.decode(), file=sys.stderr)
         sys.exit("Failed to assume-role %s" % retrieve_attribute(profile, "role_arn"))
-    
+
     output = json.loads(result.stdout)
     return {
         "roleCredentials": {
@@ -205,7 +209,7 @@ def main():
         sys.exit("Please specify profile name by --profile or environment variable AWS_PROFILE")
 
     profile = retrieve_profile(args.profile)
-    
+
     if "source_profile" in profile:
         grc_structure = get_assumed_role_credentials(profile)
     else:
@@ -223,6 +227,20 @@ def main():
         # If region is specified in profile, also export AWS_DEFAULT_REGION
         if "AWS_DEFAULT_REGION" not in os.environ and "region" in profile:
             print("export AWS_DEFAULT_REGION=\"%s\"" % retrieve_attribute(profile, "region"))
+    elif args.generate:
+        if args.outprofile is not None:
+            print("Writing Credentials to %s" % args.credentialsfile)
+            print("The credentials will expire at %s" % expiration)
+            credentials_file = open(args.credentialsfile, 'a+')
+            credentials_file.write("\n[%s]\n" % args.outprofile)
+            credentials_file.write("aws_access_key_id = %s\n" % access_key)
+            credentials_file.write("aws_secret_access_key = %s\n" % secret_access_key)
+            credentials_file.close()
+            print("Writing Configuration to %s" % args.configfile)
+            configuration_file = open(args.configfile, 'a+')
+            configuration_file.write("\n[%s]\n" % args.outprofile)
+            if "region" in profile:
+                configuration_file.write("region = %s\n" % retrieve_attribute(profile, "region"))
     elif args.process:
         output = {
             "Version": 1,
@@ -245,8 +263,10 @@ def main():
             status = os.system(" ".join(args.command))
         # The return value of os.system is not simply the exit code of the process
         # see: https://mail.python.org/pipermail/python-list/2003-May/207712.html
+        # noinspection PyUnboundLocalVariable
         if status is None:
             sys.exit(0)
+        # noinspection PyUnboundLocalVariable
         if status % 256 == 0:
             sys.exit(status//256)
         sys.exit(status % 256)
