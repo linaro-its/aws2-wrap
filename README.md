@@ -1,6 +1,7 @@
+# aws2-wrap
+
 [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=linaro-its_aws2-wrap&metric=alert_status)](https://sonarcloud.io/dashboard?id=linaro-its_aws2-wrap)
 
-# aws2-wrap
 This is a simple script to make it easier to use AWS Single Sign On credentials with tools that don't understand the `sso` entries in an AWS profile.
 
 The script provides the following capabilities:
@@ -14,9 +15,9 @@ Please note that the script is called `aws2-wrap` to show that it works with AWS
 
 ## Install using `pip`
 
-https://pypi.org/project/aws2-wrap
+<https://pypi.org/project/aws2-wrap>
 
-`pip install aws2-wrap==1.1.1`
+`pip install aws2-wrap==1.1.2`
 
 ## Run a command using AWS SSO credentials
 
@@ -56,7 +57,7 @@ For example:
 
 Your `.aws/config` file can look like this:
 
-```
+```text
 [default]
 sso_start_url = xxxxxxxxxxxx
 sso_region = us-west-2
@@ -81,14 +82,14 @@ If you are using a tool that works with normal AWS credentials but doesn't under
 
 For example, add the following block to `.aws/config`:
 
-```
+```text
 [profile Wrapped]
 credential_process = aws2-wrap --process --profile <awsprofilename>
 ```
 
 then, after authentication, you can run any command that uses AWS credentials by specifying the "Wrapped" profile:
 
-```
+```text
 aws sso login --profile <awsprofilename>
 export AWS_PROFILE=Wrapped
 export AWS_SDK_LOAD_CONFIG=1
@@ -99,4 +100,4 @@ Note that because the profile is being specified via `AWS_PROFILE`, it is someti
 
 ## Credits
 
-Thanks to @flyinprogrammer, @abeluck, @topu, @bigwheel, @krabbit, @jscook2345, @hieki, @blazdivjak and @fukushun1994 for their contributions.
+Thanks to @flyinprogrammer, @abeluck, @topu, @bigwheel, @krabbit, @jscook2345, @hieki, @blazdivjak, @fukushun1994 and @johann8384 for their contributions.
