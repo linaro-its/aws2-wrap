@@ -202,6 +202,36 @@ def get_assumed_role_credentials(profile):
     }
 
 
+def process_cred_generation(
+    credentialsfile, configfile, expiration, outprofile,
+    access_key, secret_access_key, session_token, profile):
+    """ Export the credentials and config """
+
+    config = configparser.ConfigParser()
+    config.read(credentialsfile)
+    config[outprofile] = {
+        "aws_access_key_id": access_key,
+        "aws_secret_access_key": secret_access_key,
+        "aws_session_token": session_token
+    }
+    with open(credentialsfile, "w") as file:
+        config.write(file)
+
+    config.read(configfile)
+    new_config = {}
+    if "region" in profile:
+        new_config = {
+            "region": retrieve_attribute(profile, "region")
+        }
+    config[outprofile] = new_config
+    with open(configfile, "w") as file:
+        config.write(file)
+
+    print("Credentials written to %s" % credentialsfile)
+    print("Configuration written to %s" % configfile)
+    print("The credentials will expire at %s" % expiration)
+
+
 def main():
     """ Main! """
     args = process_arguments()
@@ -229,18 +259,9 @@ def main():
             print("export AWS_DEFAULT_REGION=\"%s\"" % retrieve_attribute(profile, "region"))
     elif args.generate:
         if args.outprofile is not None:
-            print("Writing Credentials to %s" % args.credentialsfile)
-            print("The credentials will expire at %s" % expiration)
-            credentials_file = open(args.credentialsfile, 'a+')
-            credentials_file.write("\n[%s]\n" % args.outprofile)
-            credentials_file.write("aws_access_key_id = %s\n" % access_key)
-            credentials_file.write("aws_secret_access_key = %s\n" % secret_access_key)
-            credentials_file.close()
-            print("Writing Configuration to %s" % args.configfile)
-            configuration_file = open(args.configfile, 'a+')
-            configuration_file.write("\n[%s]\n" % args.outprofile)
-            if "region" in profile:
-                configuration_file.write("region = %s\n" % retrieve_attribute(profile, "region"))
+            process_cred_generation(
+                args.credentialsfile, args.configfile, expiration, args.outprofile,
+                access_key, secret_access_key, session_token, profile)
     elif args.process:
         output = {
             "Version": 1,
@@ -254,6 +275,7 @@ def main():
         os.environ["AWS_ACCESS_KEY_ID"] = access_key
         os.environ["AWS_SECRET_ACCESS_KEY"] = secret_access_key
         os.environ["AWS_SESSION_TOKEN"] = session_token
+        status = None # ensure this is initialised
         # If region is specified in profile, also set AWS_DEFAULT_REGION
         if "AWS_DEFAULT_REGION" not in os.environ and "region" in profile:
             os.environ["AWS_DEFAULT_REGION"] = retrieve_attribute(profile, "region")
