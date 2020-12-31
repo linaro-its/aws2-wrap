@@ -251,12 +251,12 @@ def main():
     session_token = grc_structure["roleCredentials"]["sessionToken"]
     expiration = grc_structure["roleCredentials"]["expiration"]
     if args.export:
-        print("export AWS_ACCESS_KEY_ID=\"%s\"" % access_key)
-        print("export AWS_SECRET_ACCESS_KEY=\"%s\"" % secret_access_key)
-        print("export AWS_SESSION_TOKEN=\"%s\"" % session_token)
+        print("export AWS_ACCESS_KEY_ID=%s" % access_key)
+        print("export AWS_SECRET_ACCESS_KEY=%s" % secret_access_key)
+        print("export AWS_SESSION_TOKEN=%s" % session_token)
         # If region is specified in profile, also export AWS_DEFAULT_REGION
         if "AWS_DEFAULT_REGION" not in os.environ and "region" in profile:
-            print("export AWS_DEFAULT_REGION=\"%s\"" % retrieve_attribute(profile, "region"))
+            print("export AWS_DEFAULT_REGION=%s" % retrieve_attribute(profile, "region"))
     elif args.generate:
         if args.outprofile is not None:
             process_cred_generation(
