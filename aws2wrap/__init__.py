@@ -9,7 +9,7 @@
 # makes certain assumptions about the cache file and does not rely on boto3 because the aws2 tool
 # packages a dev version.
 #
-# Copyright (c) 2020 Linaro Ltd
+# Copyright (c) 2021 Linaro Ltd
 
 
 import argparse
@@ -89,7 +89,11 @@ def retrieve_token_from_file(filename, sso_start_url, sso_region):
             blob["region"] != sso_region):
         return None
     expires_at = blob["expiresAt"]
-    # This will be a string like "2020-03-26T13:28:35UTC"
+    # This will be a string like "2020-03-26T13:28:35UTC" OR "2021-01-21T23:30:56Z".
+    if expires_at[-1] == "Z":
+        # Unfortunately, Python version 3.6 or earlier doesn't seem to recognise "Z" so we replace
+        # that with UTC first.
+        expires_at = expires_at[:-1] + "UTC"
     expire_datetime = datetime.strptime(expires_at.replace("UTC", "+0000"), "%Y-%m-%dT%H:%M:%S%z")
     if expire_datetime < datetime.now(timezone.utc):
         # This has expired
