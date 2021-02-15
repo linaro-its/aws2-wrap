@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 #
-# aws2-wrap [-h] [--export] [--profile PROFILE] [--exec <command>] <command>
+# aws2-wrap [-h] [--export] [--exportpwsh] [--profile PROFILE] [--exec <command>] <command>
 #
 # A simple script that exports the accessKeyId, secretAccessKey and sessionToken for the specified
 # AWS SSO credentials, or it can run a subprocess with those credentials.
@@ -27,6 +27,7 @@ def process_arguments():
     parser = argparse.ArgumentParser(allow_abbrev=False)
     group = parser.add_mutually_exclusive_group()
     group.add_argument("--export", action="store_true", help="export credentials as environment variables")
+    group.add_argument("--exportpwsh", action="store_true", help="export credentials as environment variables for powershell")
     group.add_argument("--generate", action="store_true", help="generate credentials file from the input profile")
     group.add_argument("--process", action="store_true")
     group.add_argument("--exec", action="store")
@@ -261,6 +262,13 @@ def main():
         # If region is specified in profile, also export AWS_DEFAULT_REGION
         if "AWS_DEFAULT_REGION" not in os.environ and "region" in profile:
             print("export AWS_DEFAULT_REGION=%s" % retrieve_attribute(profile, "region"))
+    elif args.exportpwsh:
+        print("$ENV:AWS_ACCESS_KEY_ID=\"%s\"" % access_key)
+        print("$ENV:AWS_SECRET_ACCESS_KEY=\"%s\"" % secret_access_key)
+        print("$ENV:AWS_SESSION_TOKEN=\"%s\"" % session_token)
+        # If region is specified in profile, also export AWS_DEFAULT_REGION
+        if "AWS_DEFAULT_REGION" not in os.environ and "region" in profile:
+            print("$ENV:AWS_DEFAULT_REGION=\"%s\"" % retrieve_attribute(profile, "region"))
     elif args.generate:
         if args.outprofile is not None:
             process_cred_generation(
