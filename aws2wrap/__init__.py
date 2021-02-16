@@ -17,6 +17,8 @@ import configparser
 import json
 import os
 import pathlib
+import psutil
+import re
 import subprocess
 import sys
 from datetime import datetime, timezone
@@ -27,7 +29,6 @@ def process_arguments():
     parser = argparse.ArgumentParser(allow_abbrev=False)
     group = parser.add_mutually_exclusive_group()
     group.add_argument("--export", action="store_true", help="export credentials as environment variables")
-    group.add_argument("--exportpwsh", action="store_true", help="export credentials as environment variables for powershell")
     group.add_argument("--generate", action="store_true", help="generate credentials file from the input profile")
     group.add_argument("--process", action="store_true")
     group.add_argument("--exec", action="store")
@@ -256,19 +257,28 @@ def main():
     session_token = grc_structure["roleCredentials"]["sessionToken"]
     expiration = grc_structure["roleCredentials"]["expiration"]
     if args.export:
-        print("export AWS_ACCESS_KEY_ID=%s" % access_key)
-        print("export AWS_SECRET_ACCESS_KEY=%s" % secret_access_key)
-        print("export AWS_SESSION_TOKEN=%s" % session_token)
-        # If region is specified in profile, also export AWS_DEFAULT_REGION
-        if "AWS_DEFAULT_REGION" not in os.environ and "region" in profile:
-            print("export AWS_DEFAULT_REGION=%s" % retrieve_attribute(profile, "region"))
-    elif args.exportpwsh:
-        print("$ENV:AWS_ACCESS_KEY_ID=\"%s\"" % access_key)
-        print("$ENV:AWS_SECRET_ACCESS_KEY=\"%s\"" % secret_access_key)
-        print("$ENV:AWS_SESSION_TOKEN=\"%s\"" % session_token)
-        # If region is specified in profile, also export AWS_DEFAULT_REGION
-        if "AWS_DEFAULT_REGION" not in os.environ and "region" in profile:
-            print("$ENV:AWS_DEFAULT_REGION=\"%s\"" % retrieve_attribute(profile, "region"))
+        # On windows parent process is aws2-wrap.exe, in unix it's the shell
+        if os.name == "nt":
+            pprocName = psutil.Process().parent().parent().name()
+        else:
+            pprocName = psutil.Process().parent().name()
+        
+        isPowerShell = bool(re.fullmatch('pwsh|pwsh.exe|powershell.exe', pprocName))
+
+        if isPowerShell:
+            print("$ENV:AWS_ACCESS_KEY_ID=\"%s\"" % access_key)
+            print("$ENV:AWS_SECRET_ACCESS_KEY=\"%s\"" % secret_access_key)
+            print("$ENV:AWS_SESSION_TOKEN=\"%s\"" % session_token)
+            # If region is specified in profile, also export AWS_DEFAULT_REGION
+            if "AWS_DEFAULT_REGION" not in os.environ and "region" in profile:
+                print("$ENV:AWS_DEFAULT_REGION=\"%s\"" % retrieve_attribute(profile, "region"))
+        else:
+            print("export AWS_ACCESS_KEY_ID=%s" % access_key)
+            print("export AWS_SECRET_ACCESS_KEY=%s" % secret_access_key)
+            print("export AWS_SESSION_TOKEN=%s" % session_token)
+            # If region is specified in profile, also export AWS_DEFAULT_REGION
+            if "AWS_DEFAULT_REGION" not in os.environ and "region" in profile:
+                print("export AWS_DEFAULT_REGION=%s" % retrieve_attribute(profile, "region"))
     elif args.generate:
         if args.outprofile is not None:
             process_cred_generation(
