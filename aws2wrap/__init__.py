@@ -259,13 +259,13 @@ def main():
     if args.export:
         # On windows parent process is aws2-wrap.exe, in unix it's the shell
         if os.name == "nt":
-            pprocName = psutil.Process().parent().parent().name()
+            shell_name = psutil.Process().parent().parent().name()
         else:
-            pprocName = psutil.Process().parent().name()
+            shell_name = psutil.Process().parent().name()
         
-        isPowerShell = bool(re.fullmatch('pwsh|pwsh.exe|powershell.exe', pprocName))
+        is_powershell = bool(re.fullmatch('pwsh|pwsh.exe|powershell.exe', shell_name))
 
-        if isPowerShell:
+        if is_powershell:
             print("$ENV:AWS_ACCESS_KEY_ID=\"%s\"" % access_key)
             print("$ENV:AWS_SECRET_ACCESS_KEY=\"%s\"" % secret_access_key)
             print("$ENV:AWS_SESSION_TOKEN=\"%s\"" % session_token)
