@@ -25,7 +25,7 @@ setup(
     packages=[
         "aws2wrap"
     ],
-    install_requires=[],
+    install_requires=[ "psutil" ],
     entry_points={
         'console_scripts': [
             'aws2-wrap = aws2wrap:main',

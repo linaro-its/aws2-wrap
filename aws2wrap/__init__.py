@@ -17,6 +17,8 @@ import configparser
 import json
 import os
 import pathlib
+import psutil
+import re
 import subprocess
 import sys
 from datetime import datetime, timezone
@@ -255,12 +257,28 @@ def main():
     session_token = grc_structure["roleCredentials"]["sessionToken"]
     expiration = grc_structure["roleCredentials"]["expiration"]
     if args.export:
-        print("export AWS_ACCESS_KEY_ID=%s" % access_key)
-        print("export AWS_SECRET_ACCESS_KEY=%s" % secret_access_key)
-        print("export AWS_SESSION_TOKEN=%s" % session_token)
-        # If region is specified in profile, also export AWS_DEFAULT_REGION
-        if "AWS_DEFAULT_REGION" not in os.environ and "region" in profile:
-            print("export AWS_DEFAULT_REGION=%s" % retrieve_attribute(profile, "region"))
+        # On windows parent process is aws2-wrap.exe, in unix it's the shell
+        if os.name == "nt":
+            shell_name = psutil.Process().parent().parent().name()
+        else:
+            shell_name = psutil.Process().parent().name()
+        
+        is_powershell = bool(re.fullmatch('pwsh|pwsh.exe|powershell.exe', shell_name))
+
+        if is_powershell:
+            print("$ENV:AWS_ACCESS_KEY_ID=\"%s\"" % access_key)
+            print("$ENV:AWS_SECRET_ACCESS_KEY=\"%s\"" % secret_access_key)
+            print("$ENV:AWS_SESSION_TOKEN=\"%s\"" % session_token)
+            # If region is specified in profile, also export AWS_DEFAULT_REGION
+            if "AWS_DEFAULT_REGION" not in os.environ and "region" in profile:
+                print("$ENV:AWS_DEFAULT_REGION=\"%s\"" % retrieve_attribute(profile, "region"))
+        else:
+            print("export AWS_ACCESS_KEY_ID=%s" % access_key)
+            print("export AWS_SECRET_ACCESS_KEY=%s" % secret_access_key)
+            print("export AWS_SESSION_TOKEN=%s" % session_token)
+            # If region is specified in profile, also export AWS_DEFAULT_REGION
+            if "AWS_DEFAULT_REGION" not in os.environ and "region" in profile:
+                print("export AWS_DEFAULT_REGION=%s" % retrieve_attribute(profile, "region"))
     elif args.generate:
         if args.outprofile is not None:
             process_cred_generation(
