@@ -17,7 +17,7 @@ Please note that the script is called `aws2-wrap` to show that it works with AWS
 
 <https://pypi.org/project/aws2-wrap>
 
-`pip install aws2-wrap==1.1.5`
+`pip3 install aws2-wrap==1.1.6`
 
 ## Run a command using AWS SSO credentials
 
@@ -34,6 +34,8 @@ Examples:
 `aws2-wrap --profile MySSOProfile --exec "terraform plan"`
 
 `AWS_PROFILE=MySSOProfile aws2-wrap terraform plan`
+
+If you are having problems with the user of quotes in the command, you may find one of the other methods works better for you.
 
 ## Generate a temporary profile in the $AWS_CONFIG_FILE and $AWS_SHARED_CREDENTIALS_FILE file
 
@@ -52,6 +54,10 @@ Since the script cannot directly set the environment variables in the calling sh
 For example:
 
 `eval "$(aws2-wrap --profile MySSOProfile --export)"`
+
+If you are using PowerShell, the equivalent command is:
+
+`aws2-wrap --profile MySSOProfile --export | invoke-expression`
 
 ## Assuming a role via AWS SSO
 
@@ -100,4 +106,4 @@ Note that because the profile is being specified via `AWS_PROFILE`, it is someti
 
 ## Credits
 
-Thanks to @flyinprogrammer, @abeluck, @topu, @bigwheel, @krabbit, @jscook2345, @hieki, @blazdivjak, @fukushun1994 and @johann8384 for their contributions.
+Thanks to @damian-bisignano, @flyinprogrammer, @abeluck, @topu, @bigwheel, @krabbit, @jscook2345, @hieki, @blazdivjak, @fukushun1994 and @johann8384 for their contributions.

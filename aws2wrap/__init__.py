@@ -1,7 +1,5 @@
 #!/usr/bin/python3
 #
-# aws2-wrap [-h] [--export] [--profile PROFILE] [--exec <command>] <command>
-#
 # A simple script that exports the accessKeyId, secretAccessKey and sessionToken for the specified
 # AWS SSO credentials, or it can run a subprocess with those credentials.
 #
@@ -257,7 +255,7 @@ def main():
     session_token = grc_structure["roleCredentials"]["sessionToken"]
     expiration = grc_structure["roleCredentials"]["expiration"]
     if args.export:
-        # On windows parent process is aws2-wrap.exe, in unix it's the shell
+        # On Windows, parent process is aws2-wrap.exe, in unix it's the shell
         if os.name == "nt":
             shell_name = psutil.Process().parent().parent().name()
         else:
