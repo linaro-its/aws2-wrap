@@ -94,8 +94,8 @@ def retrieve_token_from_file(filename, sso_start_url, sso_region):
         # Unfortunately, Python version 3.6 or earlier doesn't seem to recognise "Z" so we replace
         # that with UTC first.
         expires_at = expires_at[:-1] + "UTC"
-    format = "%Y-%m-%dT%H:%M:%S.%f%z" if "." in expires_at else "%Y-%m-%dT%H:%M:%S%z"
-    expire_datetime = datetime.strptime(expires_at.replace("UTC", "+0000"), format)
+    datetime_format = "%Y-%m-%dT%H:%M:%S.%f%z" if "." in expires_at else "%Y-%m-%dT%H:%M:%S%z"
+    expire_datetime = datetime.strptime(expires_at.replace("UTC", "+0000"), datetime_format)
     if expire_datetime < datetime.now(timezone.utc):
         # This has expired
         return None
