@@ -89,12 +89,13 @@ def retrieve_token_from_file(filename, sso_start_url, sso_region):
             blob["region"] != sso_region):
         return None
     expires_at = blob["expiresAt"]
-    # This will be a string like "2020-03-26T13:28:35UTC" OR "2021-01-21T23:30:56Z".
+    # This will be a string like "2020-03-26T13:28:35UTC" OR "2021-01-21T23:30:56Z" OR "2021-02-18T18:13:41.632177Z".
     if expires_at[-1] == "Z":
         # Unfortunately, Python version 3.6 or earlier doesn't seem to recognise "Z" so we replace
         # that with UTC first.
         expires_at = expires_at[:-1] + "UTC"
-    expire_datetime = datetime.strptime(expires_at.replace("UTC", "+0000"), "%Y-%m-%dT%H:%M:%S%z")
+    datetime_format = "%Y-%m-%dT%H:%M:%S.%f%z" if "." in expires_at else "%Y-%m-%dT%H:%M:%S%z"
+    expire_datetime = datetime.strptime(expires_at.replace("UTC", "+0000"), datetime_format)
     if expire_datetime < datetime.now(timezone.utc):
         # This has expired
         return None
