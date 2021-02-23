@@ -237,6 +237,56 @@ def process_cred_generation(
     print("The credentials will expire at %s" % expiration)
 
 
+def run_command(access_key, secret_access_key, session_token, profile, args):
+    """ Run the specified command with the credentials set up """
+    os.environ["AWS_ACCESS_KEY_ID"] = access_key
+    os.environ["AWS_SECRET_ACCESS_KEY"] = secret_access_key
+    os.environ["AWS_SESSION_TOKEN"] = session_token
+    status = None # ensure this is initialised
+    # If region is specified in profile, also set AWS_DEFAULT_REGION
+    if "AWS_DEFAULT_REGION" not in os.environ and "region" in profile:
+        os.environ["AWS_DEFAULT_REGION"] = retrieve_attribute(profile, "region")
+    if args.exec is not None:
+        status = os.system(args.exec)
+    elif args.command is not None:
+        status = os.system(" ".join(args.command))
+    # The return value of os.system is not simply the exit code of the process
+    # see: https://mail.python.org/pipermail/python-list/2003-May/207712.html
+    # noinspection PyUnboundLocalVariable
+    if status is None:
+        sys.exit(0)
+    # noinspection PyUnboundLocalVariable
+    if status % 256 == 0:
+        sys.exit(status//256)
+    sys.exit(status % 256)
+
+
+def export_credentials(access_key, secret_access_key, session_token, profile):
+    """ Export the AWS credentials to environment variables """
+    # On Windows, parent process is aws2-wrap.exe, in unix it's the shell
+    if os.name == "nt":
+        shell_name = psutil.Process().parent().parent().name()
+    else:
+        shell_name = psutil.Process().parent().name()
+
+    is_powershell = bool(re.fullmatch('pwsh|pwsh.exe|powershell.exe', shell_name))
+
+    if is_powershell:
+        print("$ENV:AWS_ACCESS_KEY_ID=\"%s\"" % access_key)
+        print("$ENV:AWS_SECRET_ACCESS_KEY=\"%s\"" % secret_access_key)
+        print("$ENV:AWS_SESSION_TOKEN=\"%s\"" % session_token)
+        # If region is specified in profile, also export AWS_DEFAULT_REGION
+        if "AWS_DEFAULT_REGION" not in os.environ and "region" in profile:
+            print("$ENV:AWS_DEFAULT_REGION=\"%s\"" % retrieve_attribute(profile, "region"))
+    else:
+        print("export AWS_ACCESS_KEY_ID=%s" % access_key)
+        print("export AWS_SECRET_ACCESS_KEY=%s" % secret_access_key)
+        print("export AWS_SESSION_TOKEN=%s" % session_token)
+        # If region is specified in profile, also export AWS_DEFAULT_REGION
+        if "AWS_DEFAULT_REGION" not in os.environ and "region" in profile:
+            print("export AWS_DEFAULT_REGION=%s" % retrieve_attribute(profile, "region"))
+
+
 def main():
     """ Main! """
     args = process_arguments()
@@ -257,27 +307,7 @@ def main():
     expiration = grc_structure["roleCredentials"]["expiration"]
     if args.export:
         # On Windows, parent process is aws2-wrap.exe, in unix it's the shell
-        if os.name == "nt":
-            shell_name = psutil.Process().parent().parent().name()
-        else:
-            shell_name = psutil.Process().parent().name()
-        
-        is_powershell = bool(re.fullmatch('pwsh|pwsh.exe|powershell.exe', shell_name))
-
-        if is_powershell:
-            print("$ENV:AWS_ACCESS_KEY_ID=\"%s\"" % access_key)
-            print("$ENV:AWS_SECRET_ACCESS_KEY=\"%s\"" % secret_access_key)
-            print("$ENV:AWS_SESSION_TOKEN=\"%s\"" % session_token)
-            # If region is specified in profile, also export AWS_DEFAULT_REGION
-            if "AWS_DEFAULT_REGION" not in os.environ and "region" in profile:
-                print("$ENV:AWS_DEFAULT_REGION=\"%s\"" % retrieve_attribute(profile, "region"))
-        else:
-            print("export AWS_ACCESS_KEY_ID=%s" % access_key)
-            print("export AWS_SECRET_ACCESS_KEY=%s" % secret_access_key)
-            print("export AWS_SESSION_TOKEN=%s" % session_token)
-            # If region is specified in profile, also export AWS_DEFAULT_REGION
-            if "AWS_DEFAULT_REGION" not in os.environ and "region" in profile:
-                print("export AWS_DEFAULT_REGION=%s" % retrieve_attribute(profile, "region"))
+        export_credentials(access_key, secret_access_key, session_token, profile)
     elif args.generate:
         if args.outprofile is not None:
             process_cred_generation(
@@ -293,26 +323,7 @@ def main():
         }
         print(json.dumps(output))
     else:
-        os.environ["AWS_ACCESS_KEY_ID"] = access_key
-        os.environ["AWS_SECRET_ACCESS_KEY"] = secret_access_key
-        os.environ["AWS_SESSION_TOKEN"] = session_token
-        status = None # ensure this is initialised
-        # If region is specified in profile, also set AWS_DEFAULT_REGION
-        if "AWS_DEFAULT_REGION" not in os.environ and "region" in profile:
-            os.environ["AWS_DEFAULT_REGION"] = retrieve_attribute(profile, "region")
-        if args.exec is not None:
-            status = os.system(args.exec)
-        elif args.command is not None:
-            status = os.system(" ".join(args.command))
-        # The return value of os.system is not simply the exit code of the process
-        # see: https://mail.python.org/pipermail/python-list/2003-May/207712.html
-        # noinspection PyUnboundLocalVariable
-        if status is None:
-            sys.exit(0)
-        # noinspection PyUnboundLocalVariable
-        if status % 256 == 0:
-            sys.exit(status//256)
-        sys.exit(status % 256)
+        run_command(access_key, secret_access_key, session_token, profile, args)
 
 
 if __name__ == '__main__':
