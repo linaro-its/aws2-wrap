@@ -222,6 +222,7 @@ def process_cred_generation(
     with open(credentialsfile, "w") as file:
         config.write(file)
 
+    config = configparser.ConfigParser()
     config.read(configfile)
     new_config = {}
     if "region" in profile:
