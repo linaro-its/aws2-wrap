@@ -212,6 +212,9 @@ def process_cred_generation(
     access_key, secret_access_key, session_token, profile):
     """ Export the credentials and config """
 
+    credentialsfile = os.path.expanduser(credentialsfile) 
+    configfile = os.path.expanduser(configfile) 
+
     config = configparser.ConfigParser()
     config.read(credentialsfile)
     config[outprofile] = {
