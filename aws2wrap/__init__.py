@@ -149,7 +149,7 @@ def get_role_credentials(profile):
 
     output = json.loads(result.stdout)
     # convert expiration from float value to isoformat string
-    output["roleCredentials"]["expiration"] = datetime.fromtimestamp(float(output["roleCredentials"]["expiration"])/1000).replace(tzinfo=timezone.utc).isoformat()
+    output["roleCredentials"]["expiration"] = datetime.fromtimestamp(float(output["roleCredentials"]["expiration"])/1000, tz=timezone.utc).isoformat()
     return output
 
 
