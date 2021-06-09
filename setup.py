@@ -5,11 +5,11 @@ with open("README.md", "r") as fh:
 
 setup(
     name="aws2-wrap",
-    version="1.1.9",
+    version="1.1.10",
     description="A wrapper for executing a command with AWS CLI v2 and SSO",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/linaro-its/aws2-wrap",
+    url="https://github.com/life360/aws2-wrap",
     author="Philip Colmer",
     author_email="it-support@linaro.org",
     classifiers=[
