@@ -63,7 +63,7 @@ def retrieve_profile(profile_name):
 
     # Look for the required profile
     if section_name not in config:
-        sys.exit("Cannot find profile '%s' in ~/.aws/config" % profile_name)
+        sys.exit("Cannot find profile '%s' in %s" % (profile_name, config_path))
     # Retrieve the values as dict
     profile = dict(config[section_name])
 
