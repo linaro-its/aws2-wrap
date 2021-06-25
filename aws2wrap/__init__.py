@@ -323,7 +323,7 @@ def main():
             "AccessKeyId": access_key,
             "SecretAccessKey": secret_access_key,
             "SessionToken": session_token,
-            "Expiration": expiration,
+            "Expiration": expiration.replace('+00:00', 'Z'),
         }
         print(json.dumps(output))
     else:
