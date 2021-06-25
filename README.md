@@ -106,4 +106,4 @@ Note that because the profile is being specified via `AWS_PROFILE`, it is someti
 
 ## Credits
 
-Thanks to @damian-bisignano, @flyinprogrammer, @abeluck, @topu, @bigwheel, @krabbit, @jscook2345, @hieki, @blazdivjak, @fukushun1994, @johann8384, @ppezoldt, @atwoodjw and @lummish for their contributions.
+Thanks to @damian-bisignano, @flyinprogrammer, @abeluck, @topu, @bigwheel, @krabbit, @jscook2345, @hieki, @blazdivjak, @fukushun1994, @johann8384, @ppezoldt, @atwoodjw, @lummish, @life36-vinny and @lukemassa for their contributions.
