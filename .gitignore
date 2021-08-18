@@ -1,3 +1,14 @@
-aws2_wrap.egg-info
+.idea
+.vs
+
 build
 dist
+
+.coverage
+.coverage.*
+.coverage-*
+.mypy_cache
+__pycache__
+*.pyc
+*.egg-info
+*.wheel%
