@@ -18,7 +18,7 @@ Please note that the script is called `aws2-wrap` to show that it works with AWS
 
 <https://pypi.org/project/aws2-wrap>
 
-`pip3 install aws2-wrap==1.2.0`
+`pip3 install aws2-wrap==1.2.1`
 
 ## Run a command using AWS SSO credentials
 

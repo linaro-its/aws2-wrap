@@ -419,7 +419,7 @@ def export_credentials(
             print("export AWS_DEFAULT_REGION=%s" % retrieve_attribute(profile, "region"))
 
 
-def main(argv: Optional[List[str]]) -> int:
+def main(argv: Optional[List[str]]=None) -> int:
     """ Main! """
     if argv is None:
         argv = sys.argv
