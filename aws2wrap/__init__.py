@@ -372,7 +372,7 @@ def run_command(
     if args.exec is not None:
         status = os.system(args.exec)
     elif args.command is not None:
-        status = os.system(''.join(shlex.quote(x) for x in args.command))
+        status = os.system(' '.join(shlex.quote(x) for x in args.command))
     # The return value of os.system is not simply the exit code of the process
     # see: https://mail.python.org/pipermail/python-list/2003-May/207712.html
     # noinspection PyUnboundLocalVariable
