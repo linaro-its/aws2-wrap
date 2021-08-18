@@ -32,8 +32,18 @@ import psutil
 ProfileDef = Dict[str, Union[str, Dict[str, Any]]]
 
 
-def process_arguments() -> argparse.Namespace:
-    """ Check and extract arguments provided. """
+class Aws2WrapError(Exception):
+    """Base exception class for aws2wrap."""
+
+
+def process_arguments(argv: List[str]) -> argparse.Namespace:
+    """Check and extract arguments provided.
+
+    Args:
+        argv: The command line arguments, usually from sys.argv().
+    Returns:
+        The parsed command line.
+    """
     parser = argparse.ArgumentParser(allow_abbrev=False)
     group = parser.add_mutually_exclusive_group()
     group.add_argument(
@@ -57,14 +67,23 @@ def process_arguments() -> argparse.Namespace:
         help="the credentials file to append resulting credentials")
     parser.add_argument(
         "command", action="store", nargs=argparse.REMAINDER, help="a command that you want to wrap")
-    args = parser.parse_args()
+    args = parser.parse_args(argv[1:])
     return args
 
 
 def retrieve_attribute(profile: Dict[str, Any], tag: str) -> Any:
-    """ Safely find and return the desired attribute from the AWS Config profile. """
+    """Safely find and return the desired attribute from the AWS Config profile.
+
+    Args:
+        profile: A dictionary usually representing the AWS profile.
+        tag: The tag to fetch from the profile.
+    Returns:
+        The value of the tag if found.
+    Raises:
+        Aws2WrapError: The tag was not present in the profile.
+    """
     if tag not in profile:
-        sys.exit("'%s' not in '%s' profile" % (tag, profile))
+        raise Aws2WrapError(f"{tag!r} not in {profile!r} profile")
     return profile[tag]
 
 
@@ -85,7 +104,7 @@ def retrieve_profile(profile_name: str) -> ProfileDef:
 
     # Look for the required profile
     if section_name not in config:
-        sys.exit("Cannot find profile '%s' in %s" % (profile_name, config_path))
+        raise Aws2WrapError(f"Cannot find profile {profile_name!r} in {config_path}")
     # Retrieve the values as dict
     profile: ProfileDef = dict(config[section_name])
 
@@ -138,7 +157,7 @@ def retrieve_token(sso_start_url: str, sso_region: str, profile_name: str) -> st
         token = retrieve_token_from_file(cachefile, sso_start_url, sso_region)
         if token is not None:
             return token
-    sys.exit("Please login with 'aws sso login --profile=%s'" % profile_name)
+    raise Aws2WrapError(f"Please login with 'aws sso login --profile={profile_name}'")
 
 
 def get_role_credentials(profile: ProfileDef) -> Dict[str, Any]:
@@ -172,7 +191,7 @@ def get_role_credentials(profile: ProfileDef) -> Dict[str, Any]:
         )
     except subprocess.CalledProcessError as error:
         print(error.stderr.decode(), file=sys.stderr)
-        sys.exit("Please login with 'aws sso login --profile=%s'" % profile_name)
+        raise Aws2WrapError(f"Please login with 'aws sso login --profile={profile_name}'") from None
 
     output = json.loads(result.stdout)
     # convert expiration from float value to isoformat string
@@ -224,7 +243,8 @@ def get_assumed_role_credentials(profile: ProfileDef) -> Dict[str, Dict[str, str
         )
     except subprocess.CalledProcessError as error:
         print(error.stderr.decode(), file=sys.stderr)
-        sys.exit("Failed to assume-role %s" % retrieve_attribute(profile, "role_arn"))
+        role_arn = retrieve_attribute(profile, "role_arn")
+        raise Aws2WrapError(f"Failed to assume-role {role_arn!r}") from None
 
     output = json.loads(result.stdout)
     return {
@@ -275,8 +295,18 @@ def process_cred_generation(  # pylint: disable=too-many-arguments
 def run_command(
     access_key: str, secret_access_key: str, session_token: str,
     profile: ProfileDef, args: argparse.Namespace
-) -> None:
-    """ Run the specified command with the credentials set up """
+) -> int:
+    """Run the specified command with the credentials set up.
+
+    Args:
+        access_key: The AWS access key.
+        secret_access_key: The AWS secret access key.
+        session_token: The AWS session token.
+        profile: The local AWS profile to use.
+        args: The command line arguments.
+    Returns:
+        The exit code from the command.
+    """
     os.environ["AWS_ACCESS_KEY_ID"] = access_key
     os.environ["AWS_SECRET_ACCESS_KEY"] = secret_access_key
     os.environ["AWS_SESSION_TOKEN"] = session_token
@@ -292,11 +322,11 @@ def run_command(
     # see: https://mail.python.org/pipermail/python-list/2003-May/207712.html
     # noinspection PyUnboundLocalVariable
     if status is None:
-        sys.exit(0)
+        return 0
     # noinspection PyUnboundLocalVariable
     if status % 256 == 0:
-        sys.exit(status//256)
-    sys.exit(status % 256)
+        return status//256
+    return status % 256
 
 
 def export_credentials(
@@ -327,44 +357,52 @@ def export_credentials(
             print("export AWS_DEFAULT_REGION=%s" % retrieve_attribute(profile, "region"))
 
 
-def main() -> None:
+def main(argv: Optional[List[str]]) -> int:
     """ Main! """
-    args = process_arguments()
-    if args.profile is None:
-        sys.exit("Please specify profile name by --profile or environment variable AWS_PROFILE")
+    if argv is None:
+        argv = sys.argv
+    args = process_arguments(argv)
+    try:
+        if args.profile is None:
+            raise Aws2WrapError(
+                "Please specify profile name by --profile or environment variable AWS_PROFILE")
 
-    profile = retrieve_profile(args.profile)
+        profile = retrieve_profile(args.profile)
 
-    if "source_profile" in profile:
-        grc_structure = get_assumed_role_credentials(profile)
-    else:
-        grc_structure = get_role_credentials(profile)
+        if "source_profile" in profile:
+            grc_structure = get_assumed_role_credentials(profile)
+        else:
+            grc_structure = get_role_credentials(profile)
 
-    # Extract the results from the roleCredentials structure
-    access_key = grc_structure["roleCredentials"]["accessKeyId"]
-    secret_access_key = grc_structure["roleCredentials"]["secretAccessKey"]
-    session_token = grc_structure["roleCredentials"]["sessionToken"]
-    expiration = grc_structure["roleCredentials"]["expiration"]
-    if args.export:
-        # On Windows, parent process is aws2-wrap.exe, in unix it's the shell
-        export_credentials(access_key, secret_access_key, session_token, profile)
-    elif args.generate:
-        if args.outprofile is not None:
-            process_cred_generation(
-                args.credentialsfile, args.configfile, expiration, args.outprofile,
-                access_key, secret_access_key, session_token, profile)
-    elif args.process:
-        output = {
-            "Version": 1,
-            "AccessKeyId": access_key,
-            "SecretAccessKey": secret_access_key,
-            "SessionToken": session_token,
-            "Expiration": expiration.replace('+00:00', 'Z'),
-        }
-        print(json.dumps(output))
-    else:
-        run_command(access_key, secret_access_key, session_token, profile, args)
+        # Extract the results from the roleCredentials structure
+        access_key = grc_structure["roleCredentials"]["accessKeyId"]
+        secret_access_key = grc_structure["roleCredentials"]["secretAccessKey"]
+        session_token = grc_structure["roleCredentials"]["sessionToken"]
+        expiration = grc_structure["roleCredentials"]["expiration"]
+        if args.export:
+            # On Windows, parent process is aws2-wrap.exe, in unix it's the shell
+            export_credentials(access_key, secret_access_key, session_token, profile)
+        elif args.generate:
+            if args.outprofile is not None:
+                process_cred_generation(
+                    args.credentialsfile, args.configfile, expiration, args.outprofile,
+                    access_key, secret_access_key, session_token, profile)
+        elif args.process:
+            output = {
+                "Version": 1,
+                "AccessKeyId": access_key,
+                "SecretAccessKey": secret_access_key,
+                "SessionToken": session_token,
+                "Expiration": expiration.replace('+00:00', 'Z'),
+            }
+            print(json.dumps(output))
+        else:
+            return run_command(access_key, secret_access_key, session_token, profile, args)
+    except Aws2WrapError as error:
+        print(error, file=sys.stderr)
+        return 1
+    return 0
 
 
 if __name__ == '__main__':
-    main()
+    sys.exit(main(sys.argv))
