@@ -6,10 +6,11 @@ This is a simple script to make it easier to use AWS Single Sign On credentials 
 
 The script provides the following capabilities:
 
-* Running a specified command with the retrieved AWS SSO credentials.
-* Exporting the AWS SSO credentials.
-* Supporting `credential_process` within an AWS profile
-* Supporting assuming roles within an AWS profile
+* Run a command using AWS SSO credentials
+* Generate a temporary profile in the $AWS_CONFIG_FILE and $AWS_SHARED_CREDENTIALS_FILE file
+* Exporting the AWS SSO credentials
+* Use the credentials via .aws/config
+* Assume a role via AWS SSO
 
 Please note that the script is called `aws2-wrap` to show that it works with AWS CLI v2, even though the CLI tool is no longer called `aws2`.
 
@@ -17,7 +18,7 @@ Please note that the script is called `aws2-wrap` to show that it works with AWS
 
 <https://pypi.org/project/aws2-wrap>
 
-`pip3 install aws2-wrap==1.1.11`
+`pip3 install aws2-wrap==1.2.0`
 
 ## Run a command using AWS SSO credentials
 
@@ -35,7 +36,7 @@ Examples:
 
 `AWS_PROFILE=MySSOProfile aws2-wrap terraform plan`
 
-If you are having problems with the user of quotes in the command, you may find one of the other methods works better for you.
+If you are having problems with the use of quotes in the command, you may find one of the other methods works better for you.
 
 ## Generate a temporary profile in the $AWS_CONFIG_FILE and $AWS_SHARED_CREDENTIALS_FILE file
 
@@ -43,7 +44,7 @@ There are some utilities which work better with the configuration files rather t
 
 `aws2-wrap --generate --profile $AWS_PROFILE --credentialsfile $AWS_SHARED_CREDENTIALS_FILE --configfile $AWS_CONFIG_FILE --outprofile $DESTINATION_PROFILE`
 
-## Export the credentials
+## Export the AWS SSO credentials
 
 There may be circumstances when it is easier/better to set the appropriate environment variables so that they can be re-used by any `aws` command.
 
@@ -58,29 +59,6 @@ For example:
 If you are using PowerShell, the equivalent command is:
 
 `aws2-wrap --profile MySSOProfile --export | invoke-expression`
-
-## Assuming a role via AWS SSO
-
-Your `.aws/config` file can look like this:
-
-```text
-[default]
-sso_start_url = xxxxxxxxxxxx
-sso_region = us-west-2
-sso_account_id = xxxxxxxxxxxx
-sso_role_name = SSORoleName
-
-[profile account1]
-role_arn = arn:aws:iam::xxxxxxxxxxxx:role/role-to-be-assumed
-source_profile = default
-region = ap-northeast-1
-```
-
-allowing you to then run:
-
-`aws2-wrap --profile account1 <command>`
-
-and `<command>` will be run under `role-to-be-assumed`.
 
 ## Use the credentials via .aws/config
 
@@ -104,6 +82,29 @@ terraform plan
 
 Note that because the profile is being specified via `AWS_PROFILE`, it is sometimes necessary (as shown above) to set `AWS_SDK_LOAD_CONFIG` in order to get tools like `terraform` to successfully retrieve the credentials.
 
+## Assume a role via AWS SSO
+
+Your `.aws/config` file can look like this:
+
+```text
+[default]
+sso_start_url = xxxxxxxxxxxx
+sso_region = us-west-2
+sso_account_id = xxxxxxxxxxxx
+sso_role_name = SSORoleName
+
+[profile account1]
+role_arn = arn:aws:iam::xxxxxxxxxxxx:role/role-to-be-assumed
+source_profile = default
+region = ap-northeast-1
+```
+
+allowing you to then run:
+
+`aws2-wrap --profile account1 <command>`
+
+and `<command>` will be run under `role-to-be-assumed`.
+
 ## Credits
 
-Thanks to @damian-bisignano, @flyinprogrammer, @abeluck, @topu, @bigwheel, @krabbit, @jscook2345, @hieki, @blazdivjak, @fukushun1994, @johann8384, @ppezoldt, @atwoodjw, @lummish, @life36-vinny and @lukemassa for their contributions.
+Thanks to @sodul, @damian-bisignano, @flyinprogrammer, @abeluck, @topu, @bigwheel, @krabbit, @jscook2345, @hieki, @blazdivjak, @fukushun1994, @johann8384, @ppezoldt, @atwoodjw, @lummish, @life36-vinny and @lukemassa for their contributions.

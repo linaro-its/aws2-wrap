@@ -88,7 +88,15 @@ def retrieve_attribute(profile: Dict[str, Any], tag: str) -> Any:
 
 
 def retrieve_profile(profile_name: str) -> ProfileDef:
-    """ Find the AWS Config profile matching the specified profile name. """
+    """Find the AWS Config profile matching the specified profile name.
+
+    Args:
+        profile_name: The name of the AWS profile to return.
+    Returns:
+        The AWS profile matching that name if found.
+    Raises:
+        Aws2WrapError: The profile was not found in the config file.
+    """
     aws_config_file = os.environ.get("AWS_CONFIG_FILE")
     if aws_config_file:
         config_path = os.path.abspath(aws_config_file)
@@ -123,7 +131,15 @@ def retrieve_profile(profile_name: str) -> ProfileDef:
 def retrieve_token_from_file(
     filename: pathlib.Path, sso_start_url: str, sso_region: str
 ) -> Optional[str]:
-    """ Check specified file and, if valid, return the access token. """
+    """Check specified file and, if valid, return the access token.
+
+    Args:
+        filename: Full path to the SSO cache file.
+        sso_start_url: The SSO URL to match for a valid token.
+        sso_region: The AWS region to match for a valid token.
+    Returns:
+        The access token if matched and not expired, otherwise None.
+    """
     with open(filename, "r") as json_file:
         blob = json.load(json_file)
     if ("startUrl" not in blob or
@@ -148,7 +164,17 @@ def retrieve_token_from_file(
 
 
 def retrieve_token(sso_start_url: str, sso_region: str, profile_name: str) -> str:
-    """ Get the access token back from the SSO cache. """
+    """Get the access token back from the SSO cache.
+
+    Args:
+        sso_start_url: The SSO URL to match for a valid token.
+        sso_region: The AWS region to match for a valid token.
+        profile_name: The desired profile to fetch the token for.
+    Returns:
+        The access token if matched and not expired.
+    Raises:
+        Aws2WrapError: No valid token found for the specified profile
+    """
     # Check each of the files in ~/.aws/sso/cache looking for one that references
     # the specific SSO URL and region. If found then check the expiration.
     cachedir_path = os.path.abspath(os.path.expanduser("~/.aws/sso/cache"))
@@ -161,7 +187,15 @@ def retrieve_token(sso_start_url: str, sso_region: str, profile_name: str) -> st
 
 
 def get_role_credentials(profile: ProfileDef) -> Dict[str, Any]:
-    """ Get the role credentials. """
+    """Get the role credentials.
+
+    Args:
+        profile: An AWS profile object.
+    Returns:
+        A dict of AWS credential values.
+    Raises:
+        Aws2WrapError: The call to get-role-credentials failed
+    """
 
     profile_name = retrieve_attribute(profile, "profile_name")
     sso_start_url = retrieve_attribute(profile, "sso_start_url")
@@ -201,7 +235,15 @@ def get_role_credentials(profile: ProfileDef) -> Dict[str, Any]:
 
 
 def get_assumed_role_credentials(profile: ProfileDef) -> Dict[str, Dict[str, str]]:
-    """Get the assumed role credentials specified by role_arn and source_profile."""
+    """Get the assumed role credentials specified by role_arn and source_profile.
+
+    Args:
+        profile: An AWS profile object.
+    Returns:
+        A dict of AWS credential values.
+    Raises:
+        Aws2WrapError: The call to assume-role failed.
+    """
 
     # If given profile is root, return sso role credentials.
     if "source_profile" not in profile:
@@ -261,7 +303,20 @@ def process_cred_generation(  # pylint: disable=too-many-arguments
     credentialsfile: str, configfile: str, expiration: str, outprofile: str,
     access_key: str, secret_access_key: str, session_token: str, profile: ProfileDef
 ) -> None:
-    """ Export the credentials and config """
+    """Export the credentials and config to the specified files.
+
+    Args:
+        credentialsfile: The user's AWS credentials file.
+        configfile: The user's AWS config file.
+        expiration: When the credentials will expire.
+        outprofile: The name of the profile under which to store the credentials
+        access_key: The generated access key.
+        secret_access_key: The generated secret access key.
+        session_token: The generated session token.
+        profile: AWS profile.
+    Raises:
+        Aws2WrapError: The call to get-role-credentials failed
+    """
 
     credentialsfile = os.path.expanduser(credentialsfile)
     configfile = os.path.expanduser(configfile)
@@ -332,7 +387,14 @@ def run_command(
 def export_credentials(
     access_key: str, secret_access_key: str, session_token: str, profile: ProfileDef
 ) -> None:
-    """ Export the AWS credentials to environment variables """
+    """Export the AWS credentials to environment variables.
+
+    Args:
+        access_key: The AWS access key.
+        secret_access_key: The AWS secret access key.
+        session_token: The AWS session token.
+        profile: The local AWS profile to use.
+    """
     # On Windows, parent process is aws2-wrap.exe, in unix it's the shell
     if os.name == "nt":
         shell_name = psutil.Process().parent().parent().name()
