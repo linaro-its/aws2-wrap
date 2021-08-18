@@ -1,3 +1,5 @@
+"""Setup script for aws2wrap."""
+
 from setuptools import setup
 
 with open("README.md", "r") as fh:

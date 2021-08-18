@@ -1,56 +1,78 @@
 #!/usr/bin/python3
 #
-# A simple script that exports the accessKeyId, secretAccessKey and sessionToken for the specified
-# AWS SSO credentials, or it can run a subprocess with those credentials.
-#
-# This script is intended to plug a (hopefully temporary) gap in the official aws2 tool. As such, it
-# makes certain assumptions about the cache file and does not rely on boto3 because the aws2 tool
-# packages a dev version.
-#
 # Copyright (c) 2021 Linaro Ltd
+#
 
+"""Simple AWS Credentials wrapper.
+
+A simple script that exports the accessKeyId, secretAccessKey and sessionToken
+for the specified AWS SSO credentials, or it can run a subprocess with those
+credentials.
+
+This script is intended to plug a (hopefully temporary) gap in the official aws2
+tool. As such, it makes certain assumptions about the cache file and does not
+rely on boto3 because the aws2 tool packages a dev version.
+"""
 
 import argparse
 import configparser
 import json
 import os
 import pathlib
-import psutil
 import re
+import shlex
 import subprocess
 import sys
-from datetime import datetime, timezone
+from datetime import datetime, timezone  # pylint: disable=wrong-import-order
+from typing import Any, Dict, List, Optional, Union  # pylint: disable=wrong-import-order
+
+import psutil
 
 
-def process_arguments():
+ProfileDef = Dict[str, Union[str, Dict[str, Any]]]
+
+
+def process_arguments() -> argparse.Namespace:
     """ Check and extract arguments provided. """
     parser = argparse.ArgumentParser(allow_abbrev=False)
     group = parser.add_mutually_exclusive_group()
-    group.add_argument("--export", action="store_true", help="export credentials as environment variables")
-    group.add_argument("--generate", action="store_true", help="generate credentials file from the input profile")
+    group.add_argument(
+        "--export", action="store_true", help="export credentials as environment variables")
+    group.add_argument(
+        "--generate", action="store_true", help="generate credentials file from the input profile")
     group.add_argument("--process", action="store_true")
     group.add_argument("--exec", action="store")
     profile_from_envvar = os.environ.get("AWS_PROFILE", os.environ.get("AWS_DEFAULT_PROFILE", None))
-    parser.add_argument("--profile", action="store", default=profile_from_envvar, help="the source profile to use for creating credentials")
-    parser.add_argument("--outprofile", action="store", default="default", help="the destination profile to save generated credentials")
-    parser.add_argument("--configfile", action="store", default="~/.aws/config", help="the config file to append resulting config")
-    parser.add_argument("--credentialsfile", action="store", default="~/.aws/credentials", help="the credentials file to append resulting credentials")
-    parser.add_argument("command", action="store", nargs=argparse.REMAINDER, help="a command that you want to wrap")
+    parser.add_argument(
+        "--profile", action="store", default=profile_from_envvar,
+        help="the source profile to use for creating credentials")
+    parser.add_argument(
+        "--outprofile", action="store", default="default",
+        help="the destination profile to save generated credentials")
+    parser.add_argument(
+        "--configfile", action="store", default="~/.aws/config",
+        help="the config file to append resulting config")
+    parser.add_argument(
+        "--credentialsfile", action="store", default="~/.aws/credentials",
+        help="the credentials file to append resulting credentials")
+    parser.add_argument(
+        "command", action="store", nargs=argparse.REMAINDER, help="a command that you want to wrap")
     args = parser.parse_args()
     return args
 
 
-def retrieve_attribute(profile, tag):
+def retrieve_attribute(profile: Dict[str, Any], tag: str) -> Any:
     """ Safely find and return the desired attribute from the AWS Config profile. """
     if tag not in profile:
         sys.exit("'%s' not in '%s' profile" % (tag, profile))
     return profile[tag]
 
 
-def retrieve_profile(profile_name):
+def retrieve_profile(profile_name: str) -> ProfileDef:
     """ Find the AWS Config profile matching the specified profile name. """
-    if "AWS_CONFIG_FILE" in os.environ:
-        config_path = os.path.abspath(os.environ.get("AWS_CONFIG_FILE"))
+    aws_config_file = os.environ.get("AWS_CONFIG_FILE")
+    if aws_config_file:
+        config_path = os.path.abspath(aws_config_file)
     else:
         config_path = os.path.abspath(os.path.expanduser("~/.aws/config"))
     config = configparser.ConfigParser()
@@ -65,7 +87,7 @@ def retrieve_profile(profile_name):
     if section_name not in config:
         sys.exit("Cannot find profile '%s' in %s" % (profile_name, config_path))
     # Retrieve the values as dict
-    profile = dict(config[section_name])
+    profile: ProfileDef = dict(config[section_name])
 
     # append profile_name as an attribute
     profile["profile_name"] = profile_name
@@ -79,7 +101,9 @@ def retrieve_profile(profile_name):
     return profile
 
 
-def retrieve_token_from_file(filename, sso_start_url, sso_region):
+def retrieve_token_from_file(
+    filename: pathlib.Path, sso_start_url: str, sso_region: str
+) -> Optional[str]:
     """ Check specified file and, if valid, return the access token. """
     with open(filename, "r") as json_file:
         blob = json.load(json_file)
@@ -89,7 +113,8 @@ def retrieve_token_from_file(filename, sso_start_url, sso_region):
             blob["region"] != sso_region):
         return None
     expires_at = blob["expiresAt"]
-    # This will be a string like "2020-03-26T13:28:35UTC" OR "2021-01-21T23:30:56Z" OR "2021-02-18T18:13:41.632177Z".
+    # This will be a string like "2020-03-26T13:28:35UTC" OR "2021-01-21T23:30:56Z"
+    # OR "2021-02-18T18:13:41.632177Z".
     if expires_at[-1] == "Z":
         # Unfortunately, Python version 3.6 or earlier doesn't seem to recognise "Z" so we replace
         # that with UTC first.
@@ -103,7 +128,7 @@ def retrieve_token_from_file(filename, sso_start_url, sso_region):
     return blob["accessToken"]
 
 
-def retrieve_token(sso_start_url, sso_region, profile_name):
+def retrieve_token(sso_start_url: str, sso_region: str, profile_name: str) -> str:
     """ Get the access token back from the SSO cache. """
     # Check each of the files in ~/.aws/sso/cache looking for one that references
     # the specific SSO URL and region. If found then check the expiration.
@@ -116,7 +141,7 @@ def retrieve_token(sso_start_url, sso_region, profile_name):
     sys.exit("Please login with 'aws sso login --profile=%s'" % profile_name)
 
 
-def get_role_credentials(profile):
+def get_role_credentials(profile: ProfileDef) -> Dict[str, Any]:
     """ Get the role credentials. """
 
     profile_name = retrieve_attribute(profile, "profile_name")
@@ -130,30 +155,33 @@ def get_role_credentials(profile):
     # We call the aws2 CLI tool rather than trying to use boto3 because the latter is
     # currently a special version and this script is trying to avoid needing any extra
     # packages.
-    result = subprocess.run(
-        [
-            "aws", "sso", "get-role-credentials",
-            "--profile", profile_name,
-            "--role-name", sso_role_name,
-            "--account-id", sso_account_id,
-            "--access-token", sso_access_token,
-            "--region", sso_region,
-            "--output", "json"
-        ],
-        stderr=subprocess.PIPE,
-        stdout=subprocess.PIPE
-    )
-    if result.returncode != 0:
-        print(result.stderr.decode(), file=sys.stderr)
+    try:
+        result = subprocess.run(
+            [
+                "aws", "sso", "get-role-credentials",
+                "--profile", profile_name,
+                "--role-name", sso_role_name,
+                "--account-id", sso_account_id,
+                "--access-token", sso_access_token,
+                "--region", sso_region,
+                "--output", "json"
+            ],
+            check=True,
+            stderr=subprocess.PIPE,
+            stdout=subprocess.PIPE
+        )
+    except subprocess.CalledProcessError as error:
+        print(error.stderr.decode(), file=sys.stderr)
         sys.exit("Please login with 'aws sso login --profile=%s'" % profile_name)
 
     output = json.loads(result.stdout)
     # convert expiration from float value to isoformat string
-    output["roleCredentials"]["expiration"] = datetime.fromtimestamp(float(output["roleCredentials"]["expiration"])/1000, tz=timezone.utc).isoformat()
+    output["roleCredentials"]["expiration"] = datetime.fromtimestamp(
+        float(output["roleCredentials"]["expiration"])/1000, tz=timezone.utc).isoformat()
     return output
 
 
-def get_assumed_role_credentials(profile):
+def get_assumed_role_credentials(profile: ProfileDef) -> Dict[str, Dict[str, str]]:
     """Get the assumed role credentials specified by role_arn and source_profile."""
 
     # If given profile is root, return sso role credentials.
@@ -181,19 +209,21 @@ def get_assumed_role_credentials(profile):
         role_session_name = "botocore-session-%d" % unix_time
 
     # AssumeRole using source credentials
-    result = subprocess.run(
-        [
-            "aws", "sts", "assume-role",
-            "--role-arn", retrieve_attribute(profile, "role_arn"),
-            "--role-session-name", role_session_name,
-            "--output", "json"
-        ],
-        stderr=subprocess.PIPE,
-        stdout=subprocess.PIPE,
-        env=env,
-    )
-    if result.returncode != 0:
-        print(result.stderr.decode(), file=sys.stderr)
+    try:
+        result = subprocess.run(
+            [
+                "aws", "sts", "assume-role",
+                "--role-arn", retrieve_attribute(profile, "role_arn"),
+                "--role-session-name", role_session_name,
+                "--output", "json"
+            ],
+            check=True,
+            stderr=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            env=env,
+        )
+    except subprocess.CalledProcessError as error:
+        print(error.stderr.decode(), file=sys.stderr)
         sys.exit("Failed to assume-role %s" % retrieve_attribute(profile, "role_arn"))
 
     output = json.loads(result.stdout)
@@ -207,13 +237,14 @@ def get_assumed_role_credentials(profile):
     }
 
 
-def process_cred_generation(
-    credentialsfile, configfile, expiration, outprofile,
-    access_key, secret_access_key, session_token, profile):
+def process_cred_generation(  # pylint: disable=too-many-arguments
+    credentialsfile: str, configfile: str, expiration: str, outprofile: str,
+    access_key: str, secret_access_key: str, session_token: str, profile: ProfileDef
+) -> None:
     """ Export the credentials and config """
 
-    credentialsfile = os.path.expanduser(credentialsfile) 
-    configfile = os.path.expanduser(configfile) 
+    credentialsfile = os.path.expanduser(credentialsfile)
+    configfile = os.path.expanduser(configfile)
 
     config = configparser.ConfigParser()
     config.read(credentialsfile)
@@ -241,7 +272,10 @@ def process_cred_generation(
     print("The credentials will expire at %s" % expiration)
 
 
-def run_command(access_key, secret_access_key, session_token, profile, args):
+def run_command(
+    access_key: str, secret_access_key: str, session_token: str,
+    profile: ProfileDef, args: argparse.Namespace
+) -> None:
     """ Run the specified command with the credentials set up """
     os.environ["AWS_ACCESS_KEY_ID"] = access_key
     os.environ["AWS_SECRET_ACCESS_KEY"] = secret_access_key
@@ -253,7 +287,7 @@ def run_command(access_key, secret_access_key, session_token, profile, args):
     if args.exec is not None:
         status = os.system(args.exec)
     elif args.command is not None:
-        status = os.system(" ".join(args.command))
+        status = os.system(shlex.join(args.command))
     # The return value of os.system is not simply the exit code of the process
     # see: https://mail.python.org/pipermail/python-list/2003-May/207712.html
     # noinspection PyUnboundLocalVariable
@@ -265,7 +299,9 @@ def run_command(access_key, secret_access_key, session_token, profile, args):
     sys.exit(status % 256)
 
 
-def export_credentials(access_key, secret_access_key, session_token, profile):
+def export_credentials(
+    access_key: str, secret_access_key: str, session_token: str, profile: ProfileDef
+) -> None:
     """ Export the AWS credentials to environment variables """
     # On Windows, parent process is aws2-wrap.exe, in unix it's the shell
     if os.name == "nt":
@@ -273,7 +309,7 @@ def export_credentials(access_key, secret_access_key, session_token, profile):
     else:
         shell_name = psutil.Process().parent().name()
 
-    is_powershell = bool(re.fullmatch('pwsh|pwsh.exe|powershell.exe', shell_name))
+    is_powershell = bool(re.fullmatch(r'pwsh|pwsh.exe|powershell.exe', shell_name))
 
     if is_powershell:
         print("$ENV:AWS_ACCESS_KEY_ID=\"%s\"" % access_key)
@@ -291,7 +327,7 @@ def export_credentials(access_key, secret_access_key, session_token, profile):
             print("export AWS_DEFAULT_REGION=%s" % retrieve_attribute(profile, "region"))
 
 
-def main():
+def main() -> None:
     """ Main! """
     args = process_arguments()
     if args.profile is None:
