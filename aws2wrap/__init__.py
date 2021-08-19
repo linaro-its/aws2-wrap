@@ -24,7 +24,7 @@ import shlex
 import subprocess
 import sys
 from datetime import datetime, timezone  # pylint: disable=wrong-import-order
-from typing import Any, Dict, List, Optional, Union  # pylint: disable=wrong-import-order
+from typing import Any, Dict, List, Optional, Union, Tuple  # pylint: disable=wrong-import-order
 
 import psutil
 
@@ -87,6 +87,18 @@ def retrieve_attribute(profile: Dict[str, Any], tag: str) -> Any:
     return profile[tag]
 
 
+def read_aws_config() -> Tuple[configparser.ConfigParser, str]:
+    """Read the AWS config from the appropriate file"""
+    aws_config_file = os.environ.get("AWS_CONFIG_FILE")
+    if aws_config_file:
+        config_path = os.path.abspath(aws_config_file)
+    else:
+        config_path = os.path.abspath(os.path.expanduser("~/.aws/config"))
+    config = configparser.ConfigParser()
+    config.read(config_path)
+    return config, config_path
+
+
 def retrieve_profile(profile_name: str) -> ProfileDef:
     """Find the AWS Config profile matching the specified profile name.
 
@@ -97,13 +109,7 @@ def retrieve_profile(profile_name: str) -> ProfileDef:
     Raises:
         Aws2WrapError: The profile was not found in the config file.
     """
-    aws_config_file = os.environ.get("AWS_CONFIG_FILE")
-    if aws_config_file:
-        config_path = os.path.abspath(aws_config_file)
-    else:
-        config_path = os.path.abspath(os.path.expanduser("~/.aws/config"))
-    config = configparser.ConfigParser()
-    config.read(config_path)
+    config, config_path = read_aws_config()
 
     if profile_name == "default":
         section_name = "default"
