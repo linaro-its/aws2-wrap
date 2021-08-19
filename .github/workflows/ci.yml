@@ -8,30 +8,30 @@ on:
   workflow_dispatch:
   # Allow manual trigger for debugging the workflow.
 jobs:
-  # run_tests:
-  #   runs-on: ubuntu-latest
-  #   strategy:
-  #     matrix:
-  #       # Skip version 3.9 as this is handled within the
-  #       # SonarCloud job. That ensures coverage is uploaded
-  #       python-version: [ '3.6', '3.7', '3.8' ]
-  #   name: CI Python ${{ matrix.python-version }}
-  #   steps:
-  #     - uses: actions/checkout@v2
-  #     - name: Set up Python
-  #       uses: actions/setup-python@v2
-  #       with:
-  #         python-version: ${{ matrix.python-version }}
-  #     - name: Display Python version
-  #       run: python -c "import sys; print(sys.version)"
-  #     - name: Install
-  #       run: make dev-install
-  #     - name: pylint
-  #       run: make pylint
-  #     - name: mypy
-  #       run: make mypy
-  #     - name: Unit Tests
-  #       run: make test
+  run_tests:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        # Skip version 3.9 as this is handled within the
+        # SonarCloud job. That ensures coverage is uploaded
+        python-version: [ '3.6', '3.7', '3.8' ]
+    name: CI Python ${{ matrix.python-version }}
+    steps:
+      - uses: actions/checkout@v2
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Display Python version
+        run: python -c "import sys; print(sys.version)"
+      - name: Install
+        run: make dev-install
+      - name: pylint
+        run: make pylint
+      - name: mypy
+        run: make mypy
+      - name: Unit Tests
+        run: make test
   sonarcloud:
     name: SonarCloud
     runs-on: ubuntu-latest
