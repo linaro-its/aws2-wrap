@@ -47,4 +47,4 @@ jobs:
       - name: Where?
         run: pwd
       - name: What's there?
-        run: ls -al
+        run: ls -al .scannerwork
