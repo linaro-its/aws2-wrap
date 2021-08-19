@@ -1,4 +1,6 @@
 """Unittests for aws2wrap."""
+import contextlib
+import io
 import unittest
 
 import aws2wrap
@@ -15,8 +17,12 @@ class TestProcessArguments(unittest.TestCase):
         self.assertFalse(args.generate)
 
     def test_exclusive(self):
-        with self.assertRaises(SystemExit):
+        fake = io.StringIO()
+        with self.assertRaises(SystemExit) as exc, contextlib.redirect_stderr(fake):
             aws2wrap.process_arguments(['aws2-wrap', '--export', '--generate'])
+        self.assertEqual(exc.exception.code, 2)
+        self.assertTrue(
+            "argument --generate: not allowed with argument --export" in fake.getvalue())
 
 
 class TestRetrieveAttribute(unittest.TestCase):
