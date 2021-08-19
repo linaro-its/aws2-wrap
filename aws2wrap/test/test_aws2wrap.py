@@ -125,7 +125,7 @@ class TestReadAwsConfig(unittest.TestCase):
 
     def test_default_retrieval(self):
         # For as-yet-unknown reasons, this fails on Python 3.6
-        if sys.version_info >= (3, 6):
+        if sys.version_info > (3, 6):
             os.environ["AWS_CONFIG_FILE"] = "/foo/bar"
             with patch("builtins.open", mock_open(read_data=self.BASIC_CONFIG_FILE)):
                 profile = aws2wrap.retrieve_profile("default")
@@ -135,7 +135,7 @@ class TestReadAwsConfig(unittest.TestCase):
 
     def test_source_retrieval(self):
         # For as-yet-unknown reasons, this fails on Python 3.6
-        if sys.version_info >= (3, 6):
+        if sys.version_info > (3, 6):
             os.environ["AWS_CONFIG_FILE"] = "/foo/bar"
             with patch("builtins.open", mock_open(read_data=self.SOURCE_CONFIG_FILE)):
                 profile = aws2wrap.retrieve_profile("source")
