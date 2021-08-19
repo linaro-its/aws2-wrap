@@ -12,16 +12,16 @@ clean:
 
 # Install the script locally.
 install:
-	pip install -e .
+	pip3 install -e .
 
 
 # Install the script and the development dependencies.
 dev-install:
-	pip install -r dev-requirements.txt
+	pip3 install -r dev-requirements.txt
 
 
 uninstall:
-	pip uninstall aws2wrap
+	pip3 uninstall aws2wrap
 
 # Run the unittests.w
 test:
