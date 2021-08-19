@@ -87,6 +87,14 @@ def retrieve_attribute(profile: Dict[str, Any], tag: str) -> Any:
     return profile[tag]
 
 
+def readline_generator(file_handle):
+    """Support mocked reading of config with Python 3.6"""
+    line = file_handle.readline()
+    while line:
+        yield line
+        line = file_handle.readline()
+
+
 def read_aws_config() -> Tuple[configparser.ConfigParser, str]:
     """Read the AWS config from the appropriate file"""
     aws_config_file = os.environ.get("AWS_CONFIG_FILE")
@@ -95,7 +103,15 @@ def read_aws_config() -> Tuple[configparser.ConfigParser, str]:
     else:
         config_path = os.path.abspath(os.path.expanduser("~/.aws/config"))
     config = configparser.ConfigParser()
-    config.read(config_path)
+    # Mocking "open" in Python 3.6 doesn't work with ConfigParser.
+    # It is suspected that this is because the reading mechanism
+    # iterates on the file handle and not by calling readline().
+    # If this package ever stops supporting Python 3.6, the following
+    # block of code can be replaced with:
+    # config.read(config_path)
+    # and the whole of "def readline_generator" removed
+    with open(config_path, encoding=None) as conf:
+        config.read_file(readline_generator(conf))
     return config, config_path
 
 
