@@ -246,7 +246,8 @@ def get_role_credentials(profile: ProfileDef) -> Dict[str, Any]:
             stdout=subprocess.PIPE
         )
     except subprocess.CalledProcessError as error:
-        print(error.stderr.decode(), file=sys.stderr)
+        if error.stderr is not None:
+            print(error.stderr.decode(), file=sys.stderr)
         raise Aws2WrapError(f"Please login with 'aws sso login --profile={profile_name}'") from None
 
     output = json.loads(result.stdout)
@@ -306,7 +307,8 @@ def get_assumed_role_credentials(profile: ProfileDef) -> Dict[str, Dict[str, str
             env=env,
         )
     except subprocess.CalledProcessError as error:
-        print(error.stderr.decode(), file=sys.stderr)
+        if error.stderr is not None:
+            print(error.stderr.decode(), file=sys.stderr)
         role_arn = retrieve_attribute(profile, "role_arn")
         raise Aws2WrapError(f"Failed to assume-role {role_arn!r}") from None
 
