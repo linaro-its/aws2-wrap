@@ -9,10 +9,19 @@ import aws2wrap
 
 # pylint: disable=missing-class-docstring,missing-function-docstring
 
-CONFIG_FILE_DATA = """\
+BASIC_CONFIG_FILE = """\
 [default]
 region = us-east-1
-output = json    
+output = json
+"""
+
+SOURCE_CONFIG_FILE = """\
+[default]
+region = us-east-1
+output = json
+
+[profile source]
+source_profile = default
 """
 
 class TestReadAwsConfig(unittest.TestCase):
@@ -20,7 +29,7 @@ class TestReadAwsConfig(unittest.TestCase):
 
     def test_specified_path(self):
         os.environ["AWS_CONFIG_FILE"] = "/foo/bar"
-        with patch("builtins.open", mock_open(read_data=CONFIG_FILE_DATA)) as mock_file:
+        with patch("builtins.open", mock_open(read_data=BASIC_CONFIG_FILE)) as mock_file:
             _, _ = aws2wrap.read_aws_config()
             mock_file.assert_called_with("/foo/bar", encoding=None)
 
@@ -33,10 +42,34 @@ class TestReadAwsConfig(unittest.TestCase):
         # The code expands "~" so we need to work out what the path
         # *should* be for later comparison
         path_to_file = os.path.abspath(os.path.expanduser("~/.aws/config"))
-        with patch("builtins.open", mock_open(read_data=CONFIG_FILE_DATA)) as mock_file:
+        with patch("builtins.open", mock_open(read_data=BASIC_CONFIG_FILE)) as mock_file:
             _, _ = aws2wrap.read_aws_config()
             mock_file.assert_called_with(path_to_file, encoding=None)
 
+    def test_missing_profile(self):
+        os.environ["AWS_CONFIG_FILE"] = "/foo/bar"
+        with patch("builtins.open", mock_open(read_data=BASIC_CONFIG_FILE)):
+            with self.assertRaises(aws2wrap.Aws2WrapError) as exc:
+                _ = aws2wrap.retrieve_profile("foo")
+        self.assertEqual("Cannot find profile 'foo' in /foo/bar", str(exc.exception))
+
+    def test_default_retrieval(self):
+        os.environ["AWS_CONFIG_FILE"] = "/foo/bar"
+        with patch("builtins.open", mock_open(read_data=BASIC_CONFIG_FILE)):
+            profile = aws2wrap.retrieve_profile("default")
+        self.assertEqual(profile["profile_name"], "default")
+        self.assertEqual(profile["region"], "us-east-1")
+        self.assertEqual(profile["output"], "json")
+
+    def test_source_retrieval(self):
+        os.environ["AWS_CONFIG_FILE"] = "/foo/bar"
+        with patch("builtins.open", mock_open(read_data=SOURCE_CONFIG_FILE)):
+            profile = aws2wrap.retrieve_profile("source")
+        self.assertTrue("source_profile" in profile)
+        self.assertEqual(profile["profile_name"], "source")
+        self.assertEqual(profile["source_profile"]["profile_name"], "default")
+        self.assertEqual(profile["source_profile"]["region"], "us-east-1")
+        self.assertEqual(profile["source_profile"]["output"], "json")
 
 class TestProcessArguments(unittest.TestCase):
     """Test a few cases of the cli parsing to ensure it is functional."""
