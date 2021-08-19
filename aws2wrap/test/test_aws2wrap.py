@@ -44,7 +44,7 @@ class TestGetRoleCredentials(unittest.TestCase):
             "Please login with 'aws sso login --profile=dummy profile name'",
             str(exc.exception))
 
-    class MockSubprocessStdout:
+    class MockSubprocessStdout: # pylint: disable=too-few-public-methods
         stdout = '{"roleCredentials":{"expiration": 10000}}'
 
     @patch('pathlib.Path.iterdir')
