@@ -435,9 +435,9 @@ def export_credentials(
         if "AWS_DEFAULT_REGION" not in os.environ and "region" in profile:
             print(f"$ENV:AWS_DEFAULT_REGION=\"{retrieve_attribute(profile, 'region')}\"")
     else:
-        print("export AWS_ACCESS_KEY_ID=%s" % access_key)
-        print("export AWS_SECRET_ACCESS_KEY=%s" % secret_access_key)
-        print("export AWS_SESSION_TOKEN=%s" % session_token)
+        print(f"export AWS_ACCESS_KEY_ID={access_key}")
+        print(f"export AWS_SECRET_ACCESS_KEY={secret_access_key}")
+        print(f"export AWS_SESSION_TOKEN={session_token}")
         # If region is specified in profile, also export AWS_DEFAULT_REGION
         if "AWS_DEFAULT_REGION" not in os.environ and "region" in profile:
             print(f"export AWS_DEFAULT_REGION={retrieve_attribute(profile, 'region')}")
