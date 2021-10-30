@@ -110,7 +110,7 @@ def read_aws_config() -> Tuple[configparser.ConfigParser, str]:
     # block of code can be replaced with:
     # config.read(config_path)
     # and the whole of "def readline_generator" removed
-    with open(config_path, encoding=None) as conf:
+    with open(config_path, mode="r", encoding="utf-8") as conf:
         config.read_file(readline_generator(conf))
     return config, config_path
 
@@ -130,7 +130,7 @@ def retrieve_profile(profile_name: str) -> ProfileDef:
     if profile_name == "default":
         section_name = "default"
     else:
-        section_name = "profile %s" % profile_name
+        section_name = f"profile {profile_name}"
 
     # Look for the required profile
     if section_name not in config:
@@ -162,7 +162,7 @@ def retrieve_token_from_file(
     Returns:
         The access token if matched and not expired, otherwise None.
     """
-    with open(filename, "r") as json_file:
+    with open(filename, mode="r", encoding="utf-8") as json_file:
         blob = json.load(json_file)
     if ("startUrl" not in blob or
             blob["startUrl"] != sso_start_url or
@@ -246,7 +246,8 @@ def get_role_credentials(profile: ProfileDef) -> Dict[str, Any]:
             stdout=subprocess.PIPE
         )
     except subprocess.CalledProcessError as error:
-        print(error.stderr.decode(), file=sys.stderr)
+        if error.stderr is not None:
+            print(error.stderr.decode(), file=sys.stderr)
         raise Aws2WrapError(f"Please login with 'aws sso login --profile={profile_name}'") from None
 
     output = json.loads(result.stdout)
@@ -289,7 +290,7 @@ def get_assumed_role_credentials(profile: ProfileDef) -> Dict[str, Dict[str, str
         role_session_name = retrieve_attribute(profile, "role_session_name")
     else:
         unix_time = int(datetime.now().timestamp())
-        role_session_name = "botocore-session-%d" % unix_time
+        role_session_name = f"botocore-session-{unix_time}"
 
     # AssumeRole using source credentials
     try:
@@ -306,7 +307,8 @@ def get_assumed_role_credentials(profile: ProfileDef) -> Dict[str, Dict[str, str
             env=env,
         )
     except subprocess.CalledProcessError as error:
-        print(error.stderr.decode(), file=sys.stderr)
+        if error.stderr is not None:
+            print(error.stderr.decode(), file=sys.stderr)
         role_arn = retrieve_attribute(profile, "role_arn")
         raise Aws2WrapError(f"Failed to assume-role {role_arn!r}") from None
 
@@ -350,7 +352,7 @@ def process_cred_generation(  # pylint: disable=too-many-arguments
         "aws_secret_access_key": secret_access_key,
         "aws_session_token": session_token
     }
-    with open(credentialsfile, "w") as file:
+    with open(credentialsfile, mode="w", encoding="utf-8") as file:
         config.write(file)
 
     config = configparser.ConfigParser()
@@ -361,12 +363,12 @@ def process_cred_generation(  # pylint: disable=too-many-arguments
             "region": retrieve_attribute(profile, "region")
         }
     config[outprofile] = new_config
-    with open(configfile, "w") as file:
+    with open(configfile, mode="w", encoding="utf-8") as file:
         config.write(file)
 
-    print("Credentials written to %s" % credentialsfile)
-    print("Configuration written to %s" % configfile)
-    print("The credentials will expire at %s" % expiration)
+    print(f"Credentials written to {credentialsfile}")
+    print(f"Configuration written to {configfile}")
+    print(f"The credentials will expire at {expiration}")
 
 
 def run_command(
@@ -426,19 +428,19 @@ def export_credentials(
     is_powershell = bool(re.fullmatch(r'pwsh|pwsh.exe|powershell.exe', shell_name))
 
     if is_powershell:
-        print("$ENV:AWS_ACCESS_KEY_ID=\"%s\"" % access_key)
-        print("$ENV:AWS_SECRET_ACCESS_KEY=\"%s\"" % secret_access_key)
-        print("$ENV:AWS_SESSION_TOKEN=\"%s\"" % session_token)
+        print(f"$ENV:AWS_ACCESS_KEY_ID=\"{access_key}\"")
+        print(f"$ENV:AWS_SECRET_ACCESS_KEY=\"{secret_access_key}\"")
+        print(f"$ENV:AWS_SESSION_TOKEN=\"{session_token}\"")
         # If region is specified in profile, also export AWS_DEFAULT_REGION
         if "AWS_DEFAULT_REGION" not in os.environ and "region" in profile:
-            print("$ENV:AWS_DEFAULT_REGION=\"%s\"" % retrieve_attribute(profile, "region"))
+            print(f"$ENV:AWS_DEFAULT_REGION=\"{retrieve_attribute(profile, 'region')}\"")
     else:
-        print("export AWS_ACCESS_KEY_ID=%s" % access_key)
-        print("export AWS_SECRET_ACCESS_KEY=%s" % secret_access_key)
-        print("export AWS_SESSION_TOKEN=%s" % session_token)
+        print(f"export AWS_ACCESS_KEY_ID={access_key}")
+        print(f"export AWS_SECRET_ACCESS_KEY={secret_access_key}")
+        print(f"export AWS_SESSION_TOKEN={session_token}")
         # If region is specified in profile, also export AWS_DEFAULT_REGION
         if "AWS_DEFAULT_REGION" not in os.environ and "region" in profile:
-            print("export AWS_DEFAULT_REGION=%s" % retrieve_attribute(profile, "region"))
+            print(f"export AWS_DEFAULT_REGION={retrieve_attribute(profile, 'region')}")
 
 
 def main(argv: Optional[List[str]]=None) -> int:

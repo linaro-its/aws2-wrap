@@ -3,12 +3,92 @@ import contextlib
 import io
 import json
 import os
+from subprocess import CalledProcessError
 import unittest
 from unittest.mock import mock_open, patch
 
 import aws2wrap
 
 # pylint: disable=missing-class-docstring,missing-function-docstring
+
+class TestGetRoleCredentials(unittest.TestCase):
+    """Test get_role_credentials code"""
+
+    PROFILE = {
+        "profile_name": "dummy profile name",
+        "sso_start_url": "dummy sso start url",
+        "sso_region": "dummy sso region",
+        "sso_account_id": "dummy sso account id",
+        "sso_role_name": "dummy sso role name"
+    }
+
+    FULL_BLOB = {
+        "startUrl": "dummy sso start url",
+        "region": "dummy sso region",
+        "expiresAt": "2100-10-31T13:15:06Z",
+        "accessToken": "NotAtAllValid"
+    }
+
+    @patch('pathlib.Path.iterdir')
+    @patch("aws2wrap.subprocess.run")
+    def test_exception(self, mock_subprocess, mock_iterdir):
+        mock_iterdir.return_value = ["bar"]
+        mock_subprocess.side_effect = CalledProcessError(returncode=1, cmd="")
+        with self.assertRaises(aws2wrap.Aws2WrapError) as exc:
+            with patch(
+                    "builtins.open",
+                    mock_open(read_data=json.dumps(self.FULL_BLOB))) as mock_file:
+                _ = aws2wrap.get_role_credentials(self.PROFILE)
+                mock_file.assert_called_with("bar", mode='r', encoding='utf-8')
+        self.assertEqual(
+            "Please login with 'aws sso login --profile=dummy profile name'",
+            str(exc.exception))
+
+    class MockSubprocessStdout: # pylint: disable=too-few-public-methods
+        stdout = '{"roleCredentials":{"expiration": 10000}}'
+
+    @patch('pathlib.Path.iterdir')
+    @patch("aws2wrap.subprocess.run")
+    def test_result(self, mock_subprocess, mock_iterdir):
+        mock_subprocess.return_value = self.MockSubprocessStdout
+        mock_iterdir.return_value = ["bar"]
+        with patch(
+                "builtins.open",
+                mock_open(read_data=json.dumps(self.FULL_BLOB))) as mock_file:
+            result = aws2wrap.get_role_credentials(self.PROFILE)
+            mock_file.assert_called_with("bar", mode='r', encoding='utf-8')
+        # Check we got a valid response
+        self.assertEqual(result["roleCredentials"]["expiration"], '1970-01-01T00:00:10+00:00')
+
+
+class TestRetrieveToken(unittest.TestCase):
+    """Test retrieve_token code"""
+
+    FULL_BLOB = {
+        "startUrl": "https://jim.bob",
+        "region": "foobar",
+        "expiresAt": "2100-10-31T13:15:06Z",
+        "accessToken": "NotAtAllValid"
+    }
+
+    @patch('pathlib.Path.iterdir')
+    def test_empty_dir(self, mock_listdir):
+        mock_listdir.return_value = []
+        with self.assertRaises(aws2wrap.Aws2WrapError) as exc:
+            _ = aws2wrap.retrieve_token(
+                "fred", "bob", "jim")
+        self.assertEqual("Please login with 'aws sso login --profile=jim'", str(exc.exception))
+
+    @patch('pathlib.Path.iterdir')
+    def test_token_retrieval(self, mock_listdir):
+        mock_listdir.return_value = ["bar"]
+        with patch(
+                "builtins.open",
+                mock_open(read_data=json.dumps(self.FULL_BLOB))) as mock_file:
+            result = aws2wrap.retrieve_token("https://jim.bob", "foobar", "jim")
+            mock_file.assert_called_with("bar", mode='r', encoding='utf-8')
+        self.assertEqual(result, "NotAtAllValid")
+
 
 class TestRetrieveTokenFromFile(unittest.TestCase):
     """Test token retrival code"""
@@ -34,7 +114,7 @@ class TestRetrieveTokenFromFile(unittest.TestCase):
     def test_no_starturl(self):
         with patch("builtins.open", mock_open(read_data="{}")) as mock_file:
             result = aws2wrap.retrieve_token_from_file("/foo/bar", None, None)
-            mock_file.assert_called_with("/foo/bar", "r")
+            mock_file.assert_called_with("/foo/bar", mode='r', encoding='utf-8')
         self.assertEqual(result, None)
 
     def test_starturl_not_equal(self):
@@ -42,7 +122,7 @@ class TestRetrieveTokenFromFile(unittest.TestCase):
                 "builtins.open",
                 mock_open(read_data=json.dumps(self.STARTURL_TEST_BLOB))) as mock_file:
             result = aws2wrap.retrieve_token_from_file("/foo/bar", "https://sue.mary", None)
-            mock_file.assert_called_with("/foo/bar", "r")
+            mock_file.assert_called_with("/foo/bar", mode='r', encoding='utf-8')
         self.assertEqual(result, None)
 
     def test_no_region(self):
@@ -50,7 +130,7 @@ class TestRetrieveTokenFromFile(unittest.TestCase):
                 "builtins.open",
                 mock_open(read_data=json.dumps(self.STARTURL_TEST_BLOB))) as mock_file:
             result = aws2wrap.retrieve_token_from_file("/foo/bar", "https://jim.bob", None)
-            mock_file.assert_called_with("/foo/bar", "r")
+            mock_file.assert_called_with("/foo/bar", mode='r', encoding='utf-8')
         self.assertEqual(result, None)
 
     def test_region_not_equal(self):
@@ -58,7 +138,7 @@ class TestRetrieveTokenFromFile(unittest.TestCase):
                 "builtins.open",
                 mock_open(read_data=json.dumps(self.FULL_BLOB))) as mock_file:
             result = aws2wrap.retrieve_token_from_file("/foo/bar", "https://jim.bob", "nowhere")
-            mock_file.assert_called_with("/foo/bar", "r")
+            mock_file.assert_called_with("/foo/bar", mode='r', encoding='utf-8')
         self.assertEqual(result, None)
 
     def test_expired_token(self):
@@ -66,7 +146,7 @@ class TestRetrieveTokenFromFile(unittest.TestCase):
                 "builtins.open",
                 mock_open(read_data=json.dumps(self.EXPIRED_BLOB))) as mock_file:
             result = aws2wrap.retrieve_token_from_file("/foo/bar", "https://jim.bob", "foobar")
-            mock_file.assert_called_with("/foo/bar", "r")
+            mock_file.assert_called_with("/foo/bar", mode='r', encoding='utf-8')
         self.assertEqual(result, None)
 
     def test_access_token(self):
@@ -74,7 +154,7 @@ class TestRetrieveTokenFromFile(unittest.TestCase):
                 "builtins.open",
                 mock_open(read_data=json.dumps(self.FULL_BLOB))) as mock_file:
             result = aws2wrap.retrieve_token_from_file("/foo/bar", "https://jim.bob", "foobar")
-            mock_file.assert_called_with("/foo/bar", "r")
+            mock_file.assert_called_with("/foo/bar", mode='r', encoding='utf-8')
         self.assertEqual(result, "NotAtAllValid")
 
 
@@ -100,7 +180,7 @@ class TestReadAwsConfig(unittest.TestCase):
         os.environ["AWS_CONFIG_FILE"] = "/foo/bar"
         with patch("builtins.open", mock_open(read_data=self.BASIC_CONFIG_FILE)) as mock_file:
             _, _ = aws2wrap.read_aws_config()
-            mock_file.assert_called_with("/foo/bar", encoding=None)
+            mock_file.assert_called_with("/foo/bar", mode='r', encoding='utf-8')
 
     def test_default_path(self):
         # Clear AWS_CONFIG_FILE environment variable if it is set.
@@ -113,7 +193,7 @@ class TestReadAwsConfig(unittest.TestCase):
         path_to_file = os.path.abspath(os.path.expanduser("~/.aws/config"))
         with patch("builtins.open", mock_open(read_data=self.BASIC_CONFIG_FILE)) as mock_file:
             _, _ = aws2wrap.read_aws_config()
-            mock_file.assert_called_with(path_to_file, encoding=None)
+            mock_file.assert_called_with(path_to_file, mode='r', encoding='utf-8')
 
     def test_missing_profile(self):
         os.environ["AWS_CONFIG_FILE"] = "/foo/bar"
