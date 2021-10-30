@@ -52,7 +52,7 @@ def process_arguments(argv: List[str]) -> argparse.Namespace:
         "--generate", action="store_true", help="generate credentials file from the input profile")
     group.add_argument("--process", action="store_true")
     group.add_argument("--exec", action="store")
-    profile_from_envvar = os.environ.get("AWS_PROFILE", os.environ.get("AWS_DEFAULT_PROFILE", None))
+    profile_from_envvar = os.environ.get("AWS_PROFILE", os.environ.get("AWS_DEFAULT_PROFILE", "default"))
     parser.add_argument(
         "--profile", action="store", default=profile_from_envvar,
         help="the source profile to use for creating credentials")
