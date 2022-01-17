@@ -51,7 +51,11 @@ def process_arguments(argv: List[str]) -> argparse.Namespace:
     group.add_argument(
         "--generate",
         action="store_true",
-        help="generate credentials from the input profile, optionally stored in specified file")
+        help="generate credentials from the input profile")
+    parser.add_argument(
+        "--generatestdout",
+        action="store_true",
+        help="generate credentials from the input profile and output to the console")
     group.add_argument("--process", action="store_true")
     group.add_argument("--exec", action="store")
     profile_from_envvar = os.environ.get(
@@ -60,9 +64,6 @@ def process_arguments(argv: List[str]) -> argparse.Namespace:
     parser.add_argument(
         "--profile", action="store", default=profile_from_envvar,
         help="the source profile to use for creating credentials")
-    parser.add_argument(
-        "--generatestdout", action="store_true",
-        help="outputs generated credentials to the console not saved to file")
     parser.add_argument(
         "--outprofile", action="store", default="default",
         help="the destination profile to save generated credentials")
@@ -471,15 +472,15 @@ def main(argv: Optional[List[str]]=None) -> int:
         if args.export:
             # On Windows, parent process is aws2-wrap.exe, in unix it's the shell
             export_credentials(access_key, secret_access_key, session_token, profile)
+        elif args.generatestdout:
+            print(f"profile {args.outprofile}")
+            print("aws_access_key_id =", access_key)
+            print("aws_secret_access_key =", secret_access_key)
+            print("aws_session_token =", session_token)
         elif args.generate:
-            if args.generatestdout or args.outprofile is None:
-                print("aws_access_key_id =", access_key)
-                print("aws_secret_access_key =", secret_access_key)
-                print("aws_session_token =", session_token)
-            else:
-                process_cred_generation(
-                    args.credentialsfile, args.configfile, expiration, args.outprofile,
-                    access_key, secret_access_key, session_token, profile)
+            process_cred_generation(
+                args.credentialsfile, args.configfile, expiration, args.outprofile,
+                access_key, secret_access_key, session_token, profile)
         elif args.process:
             output = {
                 "Version": 1,

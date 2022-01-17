@@ -7,7 +7,7 @@ with open("README.md", "r") as fh:
 
 setup(
     name="aws2-wrap",
-    version="1.2.4",
+    version="1.2.5",
     description="A wrapper for executing a command with AWS CLI v2 and SSO",
     long_description=long_description,
     long_description_content_type="text/markdown",
@@ -15,7 +15,7 @@ setup(
     author="Philip Colmer",
     author_email="it-support@linaro.org",
     classifiers=[
-        'Development Status :: 4 - Beta',
+        'Development Status :: 5 - Production/Stable',
         'Intended Audience :: Developers',
         'Programming Language :: Python :: 3',
         'Environment :: Console',
