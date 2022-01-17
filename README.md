@@ -18,7 +18,7 @@ Please note that the script is called `aws2-wrap` to show that it works with AWS
 
 <https://pypi.org/project/aws2-wrap>
 
-`pip3 install aws2-wrap==1.2.3`
+`pip3 install aws2-wrap==1.2.4`
 
 ## Run a command using AWS SSO credentials
 
@@ -43,6 +43,8 @@ If you are having problems with the use of quotes in the command, you may find o
 There are some utilities which work better with the configuration files rather than the environment variables. For example, if you need to access more than one profile at a time.
 
 `aws2-wrap --generate --profile $AWS_PROFILE --credentialsfile $AWS_SHARED_CREDENTIALS_FILE --configfile $AWS_CONFIG_FILE --outprofile $DESTINATION_PROFILE`
+
+Optionally, you can specify `--generatestdout` instead of providing `--credentialsfile`, `--configfile` and `--outprofile`, and the generated credentials will then be output to the console.
 
 ## Export the AWS SSO credentials
 
@@ -104,6 +106,10 @@ allowing you to then run:
 `aws2-wrap --profile account1 <command>`
 
 and `<command>` will be run under `role-to-be-assumed`.
+
+## Contributing
+
+Contributions are more than welcome, particularly if you are able to expand on the test code. Please ensure, though, that before you submit a Pull Request, you run `make test` to ensure that your changes don't break any of the existing tests and `make pylint` to ensure that the linter is happy. Please note that the CI/CD pylint test *may* use different pylint rules from your own local setup.
 
 ## Credits
 
