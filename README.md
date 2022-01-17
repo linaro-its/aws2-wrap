@@ -109,7 +109,7 @@ and `<command>` will be run under `role-to-be-assumed`.
 
 ## Contributing
 
-Contributions are more than welcome, particularly if you are able to expand on the test code. Please ensure, though, that before you submit a Pull Request, you run `make test` to ensure that your changes don't break any of the existing tests.
+Contributions are more than welcome, particularly if you are able to expand on the test code. Please ensure, though, that before you submit a Pull Request, you run `make test` to ensure that your changes don't break any of the existing tests and `make pylint` to ensure that the linter is happy. Please note that the CI/CD pylint test *may* use different pylint rules from your own local setup.
 
 ## Credits
 
