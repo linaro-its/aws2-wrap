@@ -18,7 +18,7 @@ Please note that the script is called `aws2-wrap` to show that it works with AWS
 
 <https://pypi.org/project/aws2-wrap>
 
-`pip3 install aws2-wrap==1.2.3`
+`pip3 install aws2-wrap==1.2.4`
 
 ## Run a command using AWS SSO credentials
 
@@ -106,6 +106,10 @@ allowing you to then run:
 `aws2-wrap --profile account1 <command>`
 
 and `<command>` will be run under `role-to-be-assumed`.
+
+## Contributing
+
+Contributions are more than welcome, particularly if you are able to expand on the test code. Please ensure, though, that before you submit a Pull Request, you run `make test` to ensure that your changes don't break any of the existing tests.
 
 ## Credits
 
