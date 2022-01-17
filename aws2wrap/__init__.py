@@ -369,7 +369,7 @@ def process_cred_generation(  # pylint: disable=too-many-arguments
         new_config = {
             "region": retrieve_attribute(profile, "region")
         }
-    config["profile %s" % outprofile] = new_config
+    config[f"profile {outprofile}"] = new_config
     with open(configfile, mode="w", encoding="utf-8") as file:
         config.write(file)
 
