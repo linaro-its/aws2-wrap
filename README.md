@@ -44,6 +44,8 @@ There are some utilities which work better with the configuration files rather t
 
 `aws2-wrap --generate --profile $AWS_PROFILE --credentialsfile $AWS_SHARED_CREDENTIALS_FILE --configfile $AWS_CONFIG_FILE --outprofile $DESTINATION_PROFILE`
 
+Optionally, you can specify `--generatestdout` instead of providing `--credentialsfile`, `--configfile` and `--outprofile`, and the generated credentials will then be output to the console.
+
 ## Export the AWS SSO credentials
 
 There may be circumstances when it is easier/better to set the appropriate environment variables so that they can be re-used by any `aws` command.
