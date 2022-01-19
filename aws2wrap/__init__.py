@@ -370,7 +370,10 @@ def process_cred_generation(  # pylint: disable=too-many-arguments
         new_config = {
             "region": retrieve_attribute(profile, "region")
         }
-    config[f"profile {outprofile}"] = new_config
+    if outprofile == "default":
+        config["default"] = new_config
+    else:
+        config[f"profile {outprofile}"] = new_config
     with open(configfile, mode="w", encoding="utf-8") as file:
         config.write(file)
 
@@ -473,7 +476,7 @@ def main(argv: Optional[List[str]]=None) -> int:
             # On Windows, parent process is aws2-wrap.exe, in unix it's the shell
             export_credentials(access_key, secret_access_key, session_token, profile)
         elif args.generatestdout:
-            print(f"[profile {args.outprofile}]")
+            print(f"[{args.outprofile}]")
             print("aws_access_key_id =", access_key)
             print("aws_secret_access_key =", secret_access_key)
             print("aws_session_token =", session_token)
