@@ -3,10 +3,13 @@ name: CI
 on:
   push:
     branches: [ main, master ]
-  pull_request:
+  pull_request_target:
     branches: [ main, master ]
   workflow_dispatch:
   # Allow manual trigger for debugging the workflow.
+
+permissions: read-all
+
 jobs:
   run_tests:
     runs-on: ubuntu-latest
