@@ -1,9 +1,10 @@
 #!/usr/bin/python3
 #
-# Copyright (c) 2021 Linaro Ltd
+# Copyright (c) 2022 Linaro Ltd
 #
 
-"""Simple AWS Credentials wrapper.
+"""
+Simple AWS Credentials wrapper.
 
 A simple script that exports the accessKeyId, secretAccessKey and sessionToken
 for the specified AWS SSO credentials, or it can run a subprocess with those
@@ -247,7 +248,8 @@ def get_role_credentials(profile: ProfileDef) -> Dict[str, Any]:
                 "--account-id", sso_account_id,
                 "--access-token", sso_access_token,
                 "--region", sso_region,
-                "--output", "json"
+                "--output", "json",
+                "--no-cli-auto-prompt"
             ],
             check=True,
             stderr=subprocess.PIPE,
@@ -307,7 +309,8 @@ def get_assumed_role_credentials(profile: ProfileDef) -> Dict[str, Dict[str, str
                 "aws", "sts", "assume-role",
                 "--role-arn", retrieve_attribute(profile, "role_arn"),
                 "--role-session-name", role_session_name,
-                "--output", "json"
+                "--output", "json",
+                "--no-cli-auto-prompt"
             ],
             check=True,
             stderr=subprocess.PIPE,
