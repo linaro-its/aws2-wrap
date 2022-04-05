@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 #
-# Copyright (c) 2021 Linaro Ltd
+# Copyright (c) 2022 Linaro Ltd
 #
 
 """Simple AWS Credentials wrapper.
