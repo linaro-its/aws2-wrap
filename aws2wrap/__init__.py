@@ -3,7 +3,8 @@
 # Copyright (c) 2022 Linaro Ltd
 #
 
-"""Simple AWS Credentials wrapper.
+"""
+Simple AWS Credentials wrapper.
 
 A simple script that exports the accessKeyId, secretAccessKey and sessionToken
 for the specified AWS SSO credentials, or it can run a subprocess with those
