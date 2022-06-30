@@ -53,6 +53,10 @@ def process_arguments(argv: List[str]) -> argparse.Namespace:
         "--generate",
         action="store_true",
         help="generate credentials from the input profile")
+    group.add_argument(
+        "--generate_cred",
+        action="store_true",
+        help="generate credentials from the input profile, but do not generate config")
     parser.add_argument(
         "--generatestdout",
         action="store_true",
@@ -365,23 +369,24 @@ def process_cred_generation(  # pylint: disable=too-many-arguments
     }
     with open(credentialsfile, mode="w", encoding="utf-8") as file:
         config.write(file)
-
-    config = configparser.ConfigParser()
-    config.read(configfile)
-    new_config = {}
-    if "region" in profile:
-        new_config = {
-            "region": retrieve_attribute(profile, "region")
-        }
-    if outprofile == "default":
-        config["default"] = new_config
-    else:
-        config[f"profile {outprofile}"] = new_config
-    with open(configfile, mode="w", encoding="utf-8") as file:
-        config.write(file)
-
     print(f"Credentials written to {credentialsfile}")
-    print(f"Configuration written to {configfile}")
+
+    if configfile:
+        config = configparser.ConfigParser()
+        config.read(configfile)
+        new_config = {}
+        if "region" in profile:
+            new_config = {
+                "region": retrieve_attribute(profile, "region")
+            }
+        if outprofile == "default":
+            config["default"] = new_config
+        else:
+            config[f"profile {outprofile}"] = new_config
+        with open(configfile, mode="w", encoding="utf-8") as file:
+            config.write(file)
+        print(f"Configuration written to {configfile}")
+
     print(f"The credentials will expire at {expiration}")
 
 
@@ -486,6 +491,10 @@ def main(argv: Optional[List[str]]=None) -> int:
         elif args.generate:
             process_cred_generation(
                 args.credentialsfile, args.configfile, expiration, args.outprofile,
+                access_key, secret_access_key, session_token, profile)
+        elif args.generate_cred:
+            process_cred_generation(
+                args.credentialsfile, "", expiration, args.outprofile,
                 access_key, secret_access_key, session_token, profile)
         elif args.process:
             output = {
