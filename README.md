@@ -18,12 +18,13 @@ Please note that the script is called `aws2-wrap` to show that it works with AWS
 
 ## Prerequisites
 
-Install chromedriver
-1. Downloads specific chromedriver depending on current chrome version installed from https://chromedriver.chromium.org/downloads
-2. Extract and add to PATH
-3. Add to ~/.zshrc for MAC (or ~/.bashrc in Linux) - `export PATH=$PATH:/path/to/chromedriver`
+1. Install chromedriver
+	1. Downloads specific chromedriver depending on current chrome version installed from https://chromedriver.chromium.org/downloads
+	2. Extract and add to PATH
+	3. Add to ~/.zshrc for MAC (or ~/.bashrc in Linux) - `export PATH=$PATH:/path/to/chromedriver`
 
-Set env vars - `AWS_SSO_USERNAME` and `AWS_SSO_PASSWORD` to your aws sso username and password
+2. Set env vars - `AWS_SSO_USERNAME` and `AWS_SSO_PASSWORD` to your aws sso username and password as -
+	`export AWS_SSO_USERNAME=xyz; export AWS_SSO_PASSWORD=xyz`
 
 ## Install using `pip`
 
