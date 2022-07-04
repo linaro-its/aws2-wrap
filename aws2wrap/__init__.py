@@ -26,6 +26,13 @@ import subprocess
 import sys
 from datetime import datetime, timezone  # pylint: disable=wrong-import-order
 from typing import Any, Dict, List, Optional, Union, Tuple  # pylint: disable=wrong-import-order
+from subprocess import STDOUT, check_output
+from selenium import webdriver
+from selenium.webdriver.chrome.options import Options
+import time
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.expected_conditions import visibility_of_element_located, element_to_be_clickable, presence_of_element_located
+from selenium.webdriver.support.wait import WebDriverWait
 
 import psutil
 
@@ -218,7 +225,41 @@ def retrieve_token(sso_start_url: str, sso_region: str, profile_name: str) -> st
         token = retrieve_token_from_file(cachefile, sso_start_url, sso_region)
         if token is not None:
             return token
-    raise Aws2WrapError(f"Please login with 'aws sso login --profile={profile_name}'")
+    # raise Aws2WrapError(f"Please login with 'aws sso login --profile={profile_name}'")
+    # login to aws sso
+    try:
+        output = check_output(['aws', 'sso', 'login'], stderr=STDOUT, bufsize=0, universal_newlines=True, env=dict(os.environ, BROWSER='/bin/echo'), timeout=3)
+    except subprocess.TimeoutExpired as err:
+        username = os.environ.get('AWS_SSO_USERNAME')
+        password = os.environ.get('AWS_SSO_PASSWORD')
+        text = err.output.decode('utf-8')
+        m = re.search('Then enter the code\:\\n\\n(.+?)\n', text)
+        if m:
+            user_code = m.group(1)
+        m = re.search('open the following URL\:\\n\\n(.+?)\n\n', text)
+        if m:
+            sso_url = m.group(1)
+        aws_sso_url = sso_url + '?user_code=' + user_code
+        print('Logging in to SSO')
+        options = Options()
+        driver = webdriver.Chrome(options=options)
+        driver.get(aws_sso_url)
+        WebDriverWait(driver, 60).until(visibility_of_element_located((By.ID, 'okta-signin-username')))
+        driver.find_element_by_id('okta-signin-username').send_keys(username)
+        driver.find_element_by_id('okta-signin-password').send_keys(password)
+        driver.find_element_by_id('okta-signin-submit').click()
+        WebDriverWait(driver, 100).until(element_to_be_clickable(
+            (By.XPATH, '//input[@type="submit"]'))).click()
+        WebDriverWait(driver, 60).until(element_to_be_clickable((By.ID, 'cli_login_button'))).click()
+        driver.close()
+        print("Done sso login")
+        cachedir_path = os.path.abspath(os.path.expanduser("~/.aws/sso/cache"))
+        cachedir = pathlib.Path(cachedir_path)
+        for cachefile in cachedir.iterdir():
+            token = retrieve_token_from_file(cachefile, sso_start_url, sso_region)
+            if token is not None:
+                return token
+        raise Aws2WrapError(f"Please login with 'aws sso login --profile={profile_name}'")
 
 
 def get_role_credentials(profile: ProfileDef) -> Dict[str, Any]:
@@ -244,7 +285,7 @@ def get_role_credentials(profile: ProfileDef) -> Dict[str, Any]:
     # currently a special version and this script is trying to avoid needing any extra
     # packages.
     try:
-        result = subprocess.run(
+        result = subprocess.check_output(
             [
                 "aws", "sso", "get-role-credentials",
                 "--profile", profile_name,
@@ -254,17 +295,14 @@ def get_role_credentials(profile: ProfileDef) -> Dict[str, Any]:
                 "--region", sso_region,
                 "--output", "json",
                 "--no-cli-auto-prompt"
-            ],
-            check=True,
-            stderr=subprocess.PIPE,
-            stdout=subprocess.PIPE
+            ]
         )
     except subprocess.CalledProcessError as error:
         if error.stderr is not None:
             print(error.stderr.decode(), file=sys.stderr)
         raise Aws2WrapError(f"Please login with 'aws sso login --profile={profile_name}'") from None
 
-    output = json.loads(result.stdout)
+    output = json.loads(result)
     # convert expiration from float value to isoformat string
     output["roleCredentials"]["expiration"] = datetime.fromtimestamp(
         float(output["roleCredentials"]["expiration"])/1000, tz=timezone.utc).isoformat()
