@@ -11,8 +11,19 @@ The script provides the following capabilities:
 * Exporting the AWS SSO credentials
 * Use the credentials via .aws/config
 * Assume a role via AWS SSO
+* Checks if aws sso session is expired, if yes, opens `aws sso login` and automates entering username and password
+* If aws sso session is active then refreshes the token, so it gets extended
 
 Please note that the script is called `aws2-wrap` to show that it works with AWS CLI v2, even though the CLI tool is no longer called `aws2`.
+
+## Prerequisites
+
+Install chromedriver
+1. Downloads specific chromedriver depending on current chrome version installed from https://chromedriver.chromium.org/downloads
+2. Extract and add to PATH
+3. Add to ~/.zshrc for MAC (or ~/.bashrc in Linux) - `export PATH=$PATH:/path/to/chromedriver`
+
+Set env vars - `AWS_SSO_USERNAME` and `AWS_SSO_PASSWORD` to your aws sso username and password
 
 ## Install using `pip`
 
@@ -37,6 +48,10 @@ Examples:
 `AWS_PROFILE=MySSOProfile aws2-wrap terraform plan`
 
 If you are having problems with the use of quotes in the command, you may find one of the other methods works better for you.
+
+## Refresh credentials in $AWS_SHARED_CREDENTIALS_FILE without touching the $AWS_CONFIG_FILE
+
+`aws2-wrap --generate_cred --credentialsfile $AWS_SHARED_CREDENTIALS_FILE`
 
 ## Generate a temporary profile in the $AWS_CONFIG_FILE and $AWS_SHARED_CREDENTIALS_FILE file
 
