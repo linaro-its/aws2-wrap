@@ -14,11 +14,22 @@ The script provides the following capabilities:
 
 Please note that the script is called `aws2-wrap` to show that it works with AWS CLI v2, even though the CLI tool is no longer called `aws2`.
 
-## Install using `pip`
+## Install
+
+### Using `pip`
 
 <https://pypi.org/project/aws2-wrap>
 
-`pip3 install aws2-wrap==1.2.8`
+```
+pip3 install aws2-wrap==1.2.8
+```
+
+### Using `brew`
+
+```
+brew tap linaro-its/aws2-wrap https://github.com/linaro-its/aws2-wrap
+brew install aws2-wrap
+```
 
 ## Run a command using AWS SSO credentials
 
