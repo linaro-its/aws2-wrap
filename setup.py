@@ -1,13 +1,32 @@
 """Setup script for aws2wrap."""
 
 from setuptools import setup
+import os
+import re
+
+
+HERE = os.path.abspath(os.path.dirname(__file__))
+VERSION_RE = re.compile(r'''__version__ = ['"]([0-9.]+)['"]''')
+
+
+def get_version():
+    init = open(
+        os.path.join(
+            HERE,
+            "aws2wrap",
+            "version.py"
+        )
+    ).read()
+    return VERSION_RE.search(init).group(1)
+
 
 with open("README.md", "r") as fh:
     long_description = fh.read()
 
+
 setup(
     name="aws2-wrap",
-    version="1.2.8",
+    version=get_version(),
     description="A wrapper for executing a command with AWS CLI v2 and SSO",
     long_description=long_description,
     long_description_content_type="text/markdown",
@@ -22,7 +41,7 @@ setup(
         'License :: OSI Approved :: GNU General Public License v3 (GPLv3)',
         'Operating System :: OS Independent'
     ],
-    license="GNU General Public License v3 (GPLv3)",
+    license="GPL-3.0-or-later",
     keywords="aws profile sso assume role",
     packages=[
         "aws2wrap"
