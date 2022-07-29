@@ -29,6 +29,7 @@ from typing import Any, Dict, List, Optional, Union, Tuple  # pylint: disable=wr
 
 import psutil
 
+from aws2wrap.version import __version__
 
 ProfileDef = Dict[str, Union[str, Dict[str, Any]]]
 
@@ -48,7 +49,9 @@ def process_arguments(argv: List[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(allow_abbrev=False)
     group = parser.add_mutually_exclusive_group()
     group.add_argument(
-        "--export", action="store_true", help="export credentials as environment variables")
+        "--export",
+        action="store_true",
+        help="export credentials as environment variables")
     group.add_argument(
         "--generate",
         action="store_true",
@@ -75,7 +78,12 @@ def process_arguments(argv: List[str]) -> argparse.Namespace:
         "--credentialsfile", action="store", default="~/.aws/credentials",
         help="the credentials file to append resulting credentials")
     parser.add_argument(
-        "command", action="store", nargs=argparse.REMAINDER, help="a command that you want to wrap")
+        "command", action="store", nargs=argparse.REMAINDER,
+        help="a command that you want to wrap")
+    parser.add_argument(
+        "--version", "-v", action="version",
+        version='%(prog)s {version}'.format(version=__version__),
+        help="get version")
     args = parser.parse_args(argv[1:])
     return args
 
@@ -136,13 +144,12 @@ def retrieve_profile(profile_name: str) -> ProfileDef:
     """
     config, config_path = read_aws_config()
 
-    if profile_name == "default":
-        section_name = "default"
-    else:
-        section_name = f"profile {profile_name}"
-
     # Look for the required profile
-    if section_name not in config:
+    if f"profile {profile_name}" in config:
+        section_name = f"profile {profile_name}"
+    elif profile_name in config:
+        section_name = profile_name
+    else:
         raise Aws2WrapError(f"Cannot find profile {profile_name!r} in {config_path}")
     # Retrieve the values as dict
     profile: ProfileDef = dict(config[section_name])

@@ -15,9 +15,10 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        # Skip version 3.9 as this is handled within the
-        # SonarCloud job. That ensures coverage is uploaded
-        python-version: [ '3.6', '3.7', '3.8' ]
+        # Skip version 3.10 as this is handled within the
+        # SonarCloud job. That ensures coverage is uploaded.
+        # See "sonar.python.version" in ./sonar-project.properties
+        python-version: [ '3.6', '3.7', '3.8', '3.9' ]
     name: CI Python ${{ matrix.python-version }}
     steps:
       - uses: actions/checkout@v2
@@ -45,7 +46,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v2
         with:
-          python-version: "3.9"
+          python-version: "3.10"
       - name: Display Python version
         run: python -c "import sys; print(sys.version)"
       - name: Install
