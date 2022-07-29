@@ -1,26 +1,30 @@
 """Setup script for aws2wrap."""
 
-from setuptools import setup
 import os
 import re
 
+from setuptools import setup
 
 HERE = os.path.abspath(os.path.dirname(__file__))
 VERSION_RE = re.compile(r'''__version__ = ['"]([0-9.]+)['"]''')
 
 
 def get_version():
-    init = open(
+    """ Read version from the version file """
+    with open(
         os.path.join(
             HERE,
             "aws2wrap",
             "version.py"
-        )
-    ).read()
+        ),
+        mode="r",
+        encoding="utf-8"
+    ) as ver_file:
+        init = ver_file.read()
     return VERSION_RE.search(init).group(1)
 
 
-with open("README.md", "r") as fh:
+with open("README.md", mode="r", encoding="utf-8") as fh:
     long_description = fh.read()
 
 
@@ -46,7 +50,7 @@ setup(
     packages=[
         "aws2wrap"
     ],
-    install_requires=[ "psutil" ],
+    install_requires=["psutil"],
     entry_points={
         'console_scripts': [
             'aws2-wrap = aws2wrap:main',
