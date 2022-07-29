@@ -144,13 +144,12 @@ def retrieve_profile(profile_name: str) -> ProfileDef:
     """
     config, config_path = read_aws_config()
 
-    if profile_name == "default":
-        section_name = "default"
-    else:
-        section_name = f"profile {profile_name}"
-
     # Look for the required profile
-    if section_name not in config:
+    if f"profile {profile_name}" in config:
+        section_name = f"profile {profile_name}"
+    elif profile_name in config:
+        section_name = profile_name
+    else:
         raise Aws2WrapError(f"Cannot find profile {profile_name!r} in {config_path}")
     # Retrieve the values as dict
     profile: ProfileDef = dict(config[section_name])
