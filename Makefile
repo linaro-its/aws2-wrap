@@ -37,7 +37,7 @@ test:
 
 # Run pylint to help check that our code is sane.
 pylint:
-	python3 -m pylint -e setup.py aws2wrap
+	python3 -m pylint --errors-only setup.py aws2wrap
 
 
 # Run mypy to check that our type annotation is correct.
