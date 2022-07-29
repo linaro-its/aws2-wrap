@@ -25,7 +25,8 @@ import shlex
 import subprocess
 import sys
 from datetime import datetime, timezone  # pylint: disable=wrong-import-order
-from typing import Any, Dict, List, Optional, Union, Tuple  # pylint: disable=wrong-import-order
+from typing import (Any, Dict, List,  # pylint: disable=wrong-import-order
+                    Optional, Tuple, Union)
 
 import psutil
 
@@ -82,7 +83,7 @@ def process_arguments(argv: List[str]) -> argparse.Namespace:
         help="a command that you want to wrap")
     parser.add_argument(
         "--version", "-v", action="version",
-        version='%(prog)s {version}'.format(version=__version__),
+        version=f"%(prog)s {__version__}",
         help="get version")
     args = parser.parse_args(argv[1:])
     return args

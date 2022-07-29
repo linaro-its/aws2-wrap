@@ -21,7 +21,7 @@ Please note that the script is called `aws2-wrap` to show that it works with AWS
 <https://pypi.org/project/aws2-wrap>
 
 ```
-pip3 install aws2-wrap==1.2.8
+pip3 install aws2-wrap
 ```
 
 ### Using `brew`
@@ -121,6 +121,8 @@ and `<command>` will be run under `role-to-be-assumed`.
 
 Contributions are more than welcome, particularly if you are able to expand on the test code. Please ensure, though, that before you submit a Pull Request, you run `make test` to ensure that your changes don't break any of the existing tests and `make pylint` to ensure that the linter is happy. Please note that the CI/CD pylint test *may* use different pylint rules from your own local setup.
 
+Please also note that `make pylint` will only report errors. You *may* want to explicitly run `python3 -m pylint setup.py aws2wrap`
+
 ## Credits
 
-Thanks to @l1n, @sodul, @damian-bisignano, @flyinprogrammer, @abeluck, @topu, @bigwheel, @krabbit, @jscook2345, @hieki, @blazdivjak, @fukushun1994, @johann8384, @ppezoldt, @atwoodjw, @lummish, @life36-vinny, @lukemassa and @axelri for their contributions.
+Thanks to @nitrocode, @chenrui333, @l1n, @sodul, @damian-bisignano, @flyinprogrammer, @abeluck, @topu, @bigwheel, @krabbit, @jscook2345, @hieki, @blazdivjak, @fukushun1994, @johann8384, @ppezoldt, @atwoodjw, @lummish, @life36-vinny, @lukemassa and @axelri for their contributions.
