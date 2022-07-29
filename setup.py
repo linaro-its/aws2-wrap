@@ -41,7 +41,7 @@ setup(
         'License :: OSI Approved :: GNU General Public License v3 (GPLv3)',
         'Operating System :: OS Independent'
     ],
-    license="GNU General Public License v3 (GPLv3)",
+    license="GPL-3.0-or-later",
     keywords="aws profile sso assume role",
     packages=[
         "aws2wrap"
