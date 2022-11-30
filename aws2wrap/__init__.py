@@ -101,6 +101,8 @@ def retrieve_attribute(profile: Dict[str, Any], tag: str) -> Any:
         Aws2WrapError: The tag was not present in the profile.
     """
     if tag not in profile:
+        if "sso_session" in profile and tag in profile["sso_session"]:
+            return profile["sso_session"][tag]
         raise Aws2WrapError(f"{tag!r} not found in profile: {profile!r}")
     return profile[tag]
 
@@ -133,7 +135,7 @@ def read_aws_config() -> Tuple[configparser.ConfigParser, str]:
     return config, config_path
 
 
-def retrieve_profile(profile_name: str) -> ProfileDef:
+def retrieve_profile(profile_name: str, profile_type: str = "profile") -> ProfileDef:
     """Find the AWS Config profile matching the specified profile name.
 
     Args:
@@ -146,12 +148,13 @@ def retrieve_profile(profile_name: str) -> ProfileDef:
     config, config_path = read_aws_config()
 
     # Look for the required profile
-    if f"profile {profile_name}" in config:
-        section_name = f"profile {profile_name}"
+    look_for = f"{profile_type} {profile_name}"
+    if look_for in config:
+        section_name = look_for
     elif profile_name in config:
         section_name = profile_name
     else:
-        raise Aws2WrapError(f"Cannot find profile {profile_name!r} in {config_path}")
+        raise Aws2WrapError(f"Cannot find {profile_type} {profile_name!r} in {config_path}")
     # Retrieve the values as dict
     profile: ProfileDef = dict(config[section_name])
 
@@ -162,6 +165,13 @@ def retrieve_profile(profile_name: str) -> ProfileDef:
         # Retrieve source_profile recursively and append it to profile dict
         profile["source_profile"] = retrieve_profile(
             retrieve_attribute(profile, "source_profile")
+        )
+
+    if "sso_session" in profile:
+        # Retrieve sso_session recursively and append it to profile dict
+        profile["sso_session"] = retrieve_profile(
+            retrieve_attribute(profile, "sso_session"),
+            profile_type="sso-session"
         )
 
     return profile
