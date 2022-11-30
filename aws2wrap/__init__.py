@@ -154,7 +154,7 @@ def retrieve_profile(profile_name: str, profile_type: str = "profile") -> Profil
     elif profile_name in config:
         section_name = profile_name
     else:
-        raise Aws2WrapError(f"Cannot find {look_for} in {config_path}")
+        raise Aws2WrapError(f"Cannot find {profile_type} {profile_name!r} in {config_path}")
     # Retrieve the values as dict
     profile: ProfileDef = dict(config[section_name])
 
