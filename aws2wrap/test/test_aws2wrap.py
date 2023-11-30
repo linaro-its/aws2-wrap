@@ -76,7 +76,7 @@ class TestRetrieveToken(unittest.TestCase):
         mock_listdir.return_value = []
         with self.assertRaises(aws2wrap.Aws2WrapError) as exc:
             _ = aws2wrap.retrieve_token(
-                "fred", "bob", "jim", is_refreshable=False)
+                "fred", "bob", "jim", None)
         self.assertEqual("Please login with 'aws sso login --profile=jim'", str(exc.exception))
 
     @patch('pathlib.Path.iterdir')
@@ -86,7 +86,7 @@ class TestRetrieveToken(unittest.TestCase):
                 "builtins.open",
                 mock_open(read_data=json.dumps(self.FULL_BLOB))) as mock_file:
             result = aws2wrap.retrieve_token(
-                "https://jim.bob", "foobar", "jim", is_refreshable=False)
+                "https://jim.bob", "foobar", "jim", None)
             mock_file.assert_called_with("bar", mode='r', encoding='utf-8')
         self.assertEqual(result, "NotAtAllValid")
 

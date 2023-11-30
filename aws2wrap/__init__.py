@@ -26,7 +26,7 @@ import subprocess
 import sys
 from datetime import datetime, timezone  # pylint: disable=wrong-import-order
 from typing import (Any, Dict, List,  # pylint: disable=wrong-import-order
-                    Optional, Tuple, Union)
+                    Optional, Tuple, Union, cast)
 
 import psutil
 
@@ -212,14 +212,14 @@ def retrieve_token_from_file(
     return blob["accessToken"]
 
 
-def retrieve_token(sso_start_url: str, sso_region: str, profile_name: str, is_refreshable: bool) -> str:
+def retrieve_token(sso_start_url: str, sso_region: str, profile_name: str, refresh_profile: Optional[str]) -> str:
     """Get the access token back from the SSO cache.
 
     Args:
         sso_start_url: The SSO URL to match for a valid token.
         sso_region: The AWS region to match for a valid token.
         profile_name: The desired profile to fetch the token for.
-        is_refreshable: Whether to attempt to refresh the token, if expired.
+        refresh_profile: If set and the token is expired, refresh the token for this profile.
     Returns:
         The access token if matched and not expired.
     Raises:
@@ -228,10 +228,10 @@ def retrieve_token(sso_start_url: str, sso_region: str, profile_name: str, is_re
     try:
         return retrieve_token_from_cache(sso_start_url, sso_region, profile_name)
     except Aws2WrapError as e:
-        if not is_refreshable:
+        if refresh_profile is None:
             raise e
 
-        try_refreshing_tokens(profile_name)
+        try_refreshing_tokens(refresh_profile)
         return retrieve_token_from_cache(sso_start_url, sso_region, profile_name)
 
 
@@ -254,11 +254,12 @@ def try_refreshing_tokens(profile_name):
     call_aws_cli(["sts", "get-caller-identity"], profile_name)
 
 
-def get_role_credentials(profile: ProfileDef) -> Dict[str, Any]:
+def get_role_credentials(profile: ProfileDef, parent_profile_name: Optional[str] = None) -> Dict[str, Any]:
     """Get the role credentials.
 
     Args:
         profile: An AWS profile object.
+        parent_profile_name: The name of the parent profile (which included this profile via source_profile), if any.
     Returns:
         A dict of AWS credential values.
     Raises:
@@ -270,9 +271,9 @@ def get_role_credentials(profile: ProfileDef) -> Dict[str, Any]:
     sso_region = retrieve_attribute(profile, "sso_region")
     sso_account_id = retrieve_attribute(profile, "sso_account_id")
     sso_role_name = retrieve_attribute(profile, "sso_role_name")
-    is_refreshable = "sso_session" in profile
 
-    sso_access_token = retrieve_token(sso_start_url, sso_region, profile_name, is_refreshable)
+    refresh_profile = choose_refreshable_profile(parent_profile_name, profile)
+    sso_access_token = retrieve_token(sso_start_url, sso_region, profile_name, refresh_profile)
 
     result = call_aws_cli([
         "sso",
@@ -287,6 +288,19 @@ def get_role_credentials(profile: ProfileDef) -> Dict[str, Any]:
     output["roleCredentials"]["expiration"] = datetime.fromtimestamp(
         float(output["roleCredentials"]["expiration"])/1000, tz=timezone.utc).isoformat()
     return output
+
+
+def choose_refreshable_profile(parent_profile_name: Optional[str], profile: ProfileDef) -> Optional[str]:
+    if "sso_session" not in profile:
+        # Not refreshable
+        return None
+
+    if parent_profile_name is not None:
+        # This is a nested profile (via source_profile). The parent profile has
+        # to be refreshed.
+        return parent_profile_name
+
+    return retrieve_attribute(profile, "profile_name")
 
 
 def call_aws_cli(args, profile_name, error_supplier=None, append_profile_option=True, env=None):
@@ -315,7 +329,10 @@ def call_aws_cli(args, profile_name, error_supplier=None, append_profile_option=
     return result.stdout
 
 
-def get_assumed_role_credentials(profile: ProfileDef) -> Dict[str, Dict[str, str]]:
+def get_assumed_role_credentials(
+        profile: ProfileDef,
+        parent_profile_name: Optional[str] = None
+) -> Dict[str, Dict[str, str]]:
     """Get the assumed role credentials specified by role_arn and source_profile.
 
     Args:
@@ -328,11 +345,12 @@ def get_assumed_role_credentials(profile: ProfileDef) -> Dict[str, Dict[str, str
 
     # If given profile is root, return sso role credentials.
     if "source_profile" not in profile:
-        return get_role_credentials(profile)
+        return get_role_credentials(profile, parent_profile_name)
 
     # Get credentials of source_profile recursively.
     source_credentials = get_assumed_role_credentials(
-        retrieve_attribute(profile, "source_profile")
+        retrieve_attribute(profile, "source_profile"),
+        parent_profile_name=cast(str, profile["profile_name"])
     )
 
     # Set credentials of source_profile.
