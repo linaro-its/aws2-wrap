@@ -212,13 +212,14 @@ def retrieve_token_from_file(
     return blob["accessToken"]
 
 
-def retrieve_token(sso_start_url: str, sso_region: str, profile_name: str) -> str:
+def retrieve_token(sso_start_url: str, sso_region: str, profile_name: str, is_refreshable: bool) -> str:
     """Get the access token back from the SSO cache.
 
     Args:
         sso_start_url: The SSO URL to match for a valid token.
         sso_region: The AWS region to match for a valid token.
         profile_name: The desired profile to fetch the token for.
+        is_refreshable: Whether to attempt to refresh the token, if expired.
     Returns:
         The access token if matched and not expired.
     Raises:
@@ -226,7 +227,10 @@ def retrieve_token(sso_start_url: str, sso_region: str, profile_name: str) -> st
     """
     try:
         return retrieve_token_from_cache(sso_start_url, sso_region, profile_name)
-    except Aws2WrapError:
+    except Aws2WrapError as e:
+        if not is_refreshable:
+            raise e
+
         try_refreshing_tokens(profile_name)
         return retrieve_token_from_cache(sso_start_url, sso_region, profile_name)
 
@@ -266,8 +270,9 @@ def get_role_credentials(profile: ProfileDef) -> Dict[str, Any]:
     sso_region = retrieve_attribute(profile, "sso_region")
     sso_account_id = retrieve_attribute(profile, "sso_account_id")
     sso_role_name = retrieve_attribute(profile, "sso_role_name")
+    is_refreshable = "sso_session" in profile
 
-    sso_access_token = retrieve_token(sso_start_url, sso_region, profile_name)
+    sso_access_token = retrieve_token(sso_start_url, sso_region, profile_name, is_refreshable)
 
     result = call_aws_cli([
         "sso",
