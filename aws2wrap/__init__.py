@@ -224,6 +224,14 @@ def retrieve_token(sso_start_url: str, sso_region: str, profile_name: str) -> st
     Raises:
         Aws2WrapError: No valid token found for the specified profile
     """
+    try:
+        return retrieve_token_from_cache(sso_start_url, sso_region, profile_name)
+    except Aws2WrapError:
+        try_refreshing_tokens(profile_name)
+        return retrieve_token_from_cache(sso_start_url, sso_region, profile_name)
+
+
+def retrieve_token_from_cache(sso_start_url: str, sso_region: str, profile_name: str) -> str:
     # Check each of the files in ~/.aws/sso/cache looking for one that references
     # the specific SSO URL and region. If found then check the expiration.
     cachedir_path = os.path.abspath(os.path.expanduser("~/.aws/sso/cache"))
@@ -233,6 +241,13 @@ def retrieve_token(sso_start_url: str, sso_region: str, profile_name: str) -> st
         if token is not None:
             return token
     raise Aws2WrapError(f"Please login with 'aws sso login --profile={profile_name}'")
+
+
+def try_refreshing_tokens(profile_name):
+    # There's no direct way to refresh the tokens, but a quick STS api call does the trick.
+    # Note that `aws sso login ...` will *not* refresh the tokens but will invalidate the whole SSO session (if any)
+    # which is not what we want here.
+    call_aws_cli(["sts", "get-caller-identity"], profile_name)
 
 
 def get_role_credentials(profile: ProfileDef) -> Dict[str, Any]:
@@ -254,35 +269,45 @@ def get_role_credentials(profile: ProfileDef) -> Dict[str, Any]:
 
     sso_access_token = retrieve_token(sso_start_url, sso_region, profile_name)
 
+    result = call_aws_cli([
+        "sso",
+        "get-role-credentials",
+        "--role-name", sso_role_name,
+        "--account-id", sso_account_id,
+        "--access-token", sso_access_token,
+        "--region", sso_region
+    ], profile_name)
+    output = json.loads(result)
+    # convert expiration from float value to isoformat string
+    output["roleCredentials"]["expiration"] = datetime.fromtimestamp(
+        float(output["roleCredentials"]["expiration"])/1000, tz=timezone.utc).isoformat()
+    return output
+
+
+def call_aws_cli(args, profile_name, error_supplier=None, append_profile_option=True, env=None):
     # We call the aws2 CLI tool rather than trying to use boto3 because the latter is
     # currently a special version and this script is trying to avoid needing any extra
     # packages.
+    profile_args = ["--profile", profile_name] if append_profile_option else []
+    error_supplier = error_supplier or (
+        lambda: Aws2WrapError(f"Please login with 'aws sso login --profile={profile_name}'")
+    )
+
     try:
+        final_args = ["aws"] + args + profile_args + ["--output", "json", "--no-cli-auto-prompt"]
         result = subprocess.run(
-            [
-                "aws", "sso", "get-role-credentials",
-                "--profile", profile_name,
-                "--role-name", sso_role_name,
-                "--account-id", sso_account_id,
-                "--access-token", sso_access_token,
-                "--region", sso_region,
-                "--output", "json",
-                "--no-cli-auto-prompt"
-            ],
+            final_args,
             check=True,
+            env=env,
             stderr=subprocess.PIPE,
             stdout=subprocess.PIPE
         )
     except subprocess.CalledProcessError as error:
         if error.stderr is not None:
             print(error.stderr.decode(), file=sys.stderr)
-        raise Aws2WrapError(f"Please login with 'aws sso login --profile={profile_name}'") from None
+        raise error_supplier() from None
 
-    output = json.loads(result.stdout)
-    # convert expiration from float value to isoformat string
-    output["roleCredentials"]["expiration"] = datetime.fromtimestamp(
-        float(output["roleCredentials"]["expiration"])/1000, tz=timezone.utc).isoformat()
-    return output
+    return result.stdout
 
 
 def get_assumed_role_credentials(profile: ProfileDef) -> Dict[str, Dict[str, str]]:
@@ -320,28 +345,21 @@ def get_assumed_role_credentials(profile: ProfileDef) -> Dict[str, Dict[str, str
         unix_time = int(datetime.now().timestamp())
         role_session_name = f"botocore-session-{unix_time}"
 
-    # AssumeRole using source credentials
-    try:
-        result = subprocess.run(
-            [
-                "aws", "sts", "assume-role",
-                "--role-arn", retrieve_attribute(profile, "role_arn"),
-                "--role-session-name", role_session_name,
-                "--output", "json",
-                "--no-cli-auto-prompt"
-            ],
-            check=True,
-            stderr=subprocess.PIPE,
-            stdout=subprocess.PIPE,
-            env=env,
-        )
-    except subprocess.CalledProcessError as error:
-        if error.stderr is not None:
-            print(error.stderr.decode(), file=sys.stderr)
-        role_arn = retrieve_attribute(profile, "role_arn")
-        raise Aws2WrapError(f"Failed to assume-role {role_arn!r}") from None
+    role_arn = retrieve_attribute(profile, 'role_arn')
 
-    output = json.loads(result.stdout)
+    # AssumeRole using source credentials
+    result = call_aws_cli(
+        [
+            "sts", "assume-role",
+            "--role-arn", role_arn,
+            "--role-session-name", role_session_name
+        ],
+        profile,
+        env=env,
+        append_profile_option=False,
+        error_supplier=lambda: Aws2WrapError(f"Failed to assume-role {role_arn!r}")
+    )
+    output = json.loads(result)
     return {
         "roleCredentials": {
             "accessKeyId": output["Credentials"]["AccessKeyId"],
