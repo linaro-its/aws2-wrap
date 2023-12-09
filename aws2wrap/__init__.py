@@ -336,7 +336,7 @@ def choose_refreshable_profile(parent_profile_name: Optional[ProfileDef],
     return retrieve_attribute(profile, "profile_name")
 
 
-def call_aws_cli(args: List[str],
+def call_aws_cli(args,
                  profile_name: ProfileDef,
                  error_supplier: Optional[Callable]=None,
                  append_profile_option: bool=True,
@@ -344,7 +344,7 @@ def call_aws_cli(args: List[str],
     """Generalised function to call AWS CLI
 
     Args:
-        args (list[str]): arguments to pass to AWS CLI
+        args: arguments to pass to AWS CLI
         profile_name (ProfileDef): profile to use
         error_supplier (Callable, optional): Function to call in the event of an error.
                                              Defaults to None.
