@@ -56,5 +56,5 @@ setup(
             'aws2-wrap = aws2wrap:main',
         ]
     },
-    python_requires=">=3.6",
+    python_requires=">=3.8",
 )

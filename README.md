@@ -11,6 +11,7 @@ The script provides the following capabilities:
 * Exporting the AWS SSO credentials
 * Use the credentials via .aws/config
 * Assume a role via AWS SSO
+* Supports automatic authentication refresh via AWS IAM Identity Center (https://docs.aws.amazon.com/cli/latest/userguide/sso-configure-profile-token.html)
 
 Please note that the script is called `aws2-wrap` to show that it works with AWS CLI v2, even though the CLI tool is no longer called `aws2`.
 
@@ -125,4 +126,4 @@ Please also note that `make pylint` will only report errors. You *may* want to e
 
 ## Credits
 
-Thanks to @nitrocode, @chenrui333, @l1n, @sodul, @damian-bisignano, @flyinprogrammer, @abeluck, @topu, @bigwheel, @krabbit, @jscook2345, @hieki, @blazdivjak, @fukushun1994, @johann8384, @ppezoldt, @atwoodjw, @lummish, @life36-vinny, @lukemassa and @axelri for their contributions.
+Thanks to @matan129, @nitrocode, @chenrui333, @l1n, @sodul, @damian-bisignano, @flyinprogrammer, @abeluck, @topu, @bigwheel, @krabbit, @jscook2345, @hieki, @blazdivjak, @fukushun1994, @johann8384, @ppezoldt, @atwoodjw, @lummish, @life36-vinny, @lukemassa and @axelri for their contributions.
