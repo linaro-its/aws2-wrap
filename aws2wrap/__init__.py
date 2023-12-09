@@ -230,9 +230,9 @@ def retrieve_token(sso_start_url: str,
     """
     try:
         return retrieve_token_from_cache(sso_start_url, sso_region, profile_name)
-    except Aws2WrapError as e:
+    except Aws2WrapError as exception:
         if refresh_profile is None:
-            raise e
+            raise exception
 
         try_refreshing_tokens(refresh_profile)
         return retrieve_token_from_cache(sso_start_url, sso_region, profile_name)
@@ -264,7 +264,7 @@ def retrieve_token_from_cache(sso_start_url: str, sso_region: str, profile_name:
 
 def try_refreshing_tokens(profile_name: ProfileDef):
     """Try to refresh any token that AWS CLI currently has for the desired profile.
-    
+
     There's no direct way to refresh the tokens, but a quick STS api call does the trick.
     Note that `aws sso login ...` will *not* refresh the tokens but will invalidate
     the whole SSO session (if any) which is not what we want here.
@@ -336,7 +336,7 @@ def choose_refreshable_profile(parent_profile_name: Optional[ProfileDef],
     return retrieve_attribute(profile, "profile_name")
 
 
-def call_aws_cli(args: list[str],
+def call_aws_cli(args: List[str],
                  profile_name: ProfileDef,
                  error_supplier: Optional[Callable]=None,
                  append_profile_option: bool=True,
